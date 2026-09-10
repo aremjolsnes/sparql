@@ -51,18 +51,20 @@ function Cell({ term }: { term: SparqlTerm | undefined }) {
 }
 
 export default function ResultsTable({ vars, rows, startNumber }: Props) {
+  // Ingen overflow-container her: da fester `position: sticky` på <th> seg til
+  // toppen av vinduet når hele siden skrolles (også i Firefox).
   return (
-    <div className="overflow-x-auto border border-border rounded">
-      <table className="w-full border-collapse text-sm">
+    <div className="border border-border">
+      <table className="w-full border-separate border-spacing-0 text-sm">
         <thead>
-          <tr className="bg-panel-2">
-            <th className="text-right px-3 py-2 border-b border-border text-muted font-medium w-12">
+          <tr>
+            <th className="sticky top-0 z-20 bg-panel-2 text-right px-3 py-2 border-b border-border text-muted font-medium w-12">
               #
             </th>
             {vars.map((v) => (
               <th
                 key={v}
-                className="text-left px-3 py-2 border-b border-border font-semibold whitespace-nowrap"
+                className="sticky top-0 z-20 bg-panel-2 text-left px-3 py-2 border-b border-border font-semibold whitespace-nowrap"
               >
                 {v}
               </th>
