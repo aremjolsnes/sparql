@@ -233,10 +233,17 @@ export default function Page() {
 
   async function execute() {
     const tab = activeTab;
-    const { query: prepared, added } = ensurePrefixes(tab.query);
-    if (added.length) {
+    const { query: prepared, added, adjusted } = ensurePrefixes(
+      tab.query,
+      selectedEndpoint.prefixes,
+    );
+    if (added.length || adjusted.length) {
       setTabQuery(tab.id, prepared);
-      flashNotice(`La til prefiks: ${added.join(", ")}`);
+      const parts: string[] = [];
+      if (added.length) parts.push(`la til prefiks: ${added.join(", ")}`);
+      if (adjusted.length)
+        parts.push(`justerte ${adjusted.join(", ")} for ${selectedEndpoint.name}`);
+      flashNotice(parts.join(" · "));
     }
 
     setRuns((r) => ({

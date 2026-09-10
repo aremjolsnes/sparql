@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Prec } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import { StreamLanguage } from "@codemirror/language";
@@ -33,16 +33,20 @@ export default function SparqlEditor({ value, onChange, onRun }: Props) {
         StreamLanguage.define(sparql),
         oneDark,
         EditorView.lineWrapping,
-        keymap.of([
-          {
-            key: "Mod-Enter",
-            preventDefault: true,
-            run: () => {
-              onRunRef.current();
-              return true;
+        // Prec.highest slår basicSetup sin defaultKeymap, som ellers binder
+        // Mod-Enter til «sett inn blank linje».
+        Prec.highest(
+          keymap.of([
+            {
+              key: "Mod-Enter",
+              preventDefault: true,
+              run: () => {
+                onRunRef.current();
+                return true;
+              },
             },
-          },
-        ]),
+          ]),
+        ),
         EditorView.updateListener.of((u) => {
           if (u.docChanged) onChangeRef.current(u.state.doc.toString());
         }),

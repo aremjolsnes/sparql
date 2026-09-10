@@ -5,6 +5,11 @@ export type Endpoint = {
   url: string;
   /** Innebygde endepunkter kan ikke fjernes i UI-et */
   builtin?: boolean;
+  /**
+   * Prefiks-overstyringer for dette endepunktet. Beta-repoet bruker
+   * `beta-data.udir.no` i status-URI-ene i stedet for `data.udir.no`.
+   */
+  prefixes?: Record<string, string>;
 };
 
 /**
@@ -20,6 +25,9 @@ export const BUILTIN_ENDPOINTS: Endpoint[] = [
     name: "Beta",
     url: "https://sparql-beta-data.udir.no/repositories/201906",
     builtin: true,
+    prefixes: {
+      st: "https://beta-data.udir.no/kl06/v201906/status/status_",
+    },
   },
   {
     name: "Prod",
