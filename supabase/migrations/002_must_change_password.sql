@@ -40,6 +40,7 @@ $$;
 
 grant execute on function public.mark_password_changed() to authenticated;
 
--- Rydd opp for eventuelle brukere som allerede finnes: la den manuelt opprettede
--- admin-brukeren slippe, men be øvrige om å bytte.
+-- Rydd opp for brukere som allerede finnes: be alle bytte passord (de fikk et
+-- midlertidig ett fra admin), bortsett fra den manuelt opprettede admin-brukeren.
+update public.profiles set must_change_password = true;
 update public.profiles set must_change_password = false where email = 'aremjolsnes@gmail.com';
