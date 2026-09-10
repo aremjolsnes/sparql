@@ -299,7 +299,7 @@ export default function Page() {
     <div className="flex flex-col min-h-screen">
       {/* Topplinje */}
       <header className="flex items-center justify-between gap-4 px-5 py-3 border-b border-border">
-        <h1 className="text-lg font-semibold">SPARQL-workbench mot Grep</h1>
+        <h1 className="text-lg font-semibold">SPARQL-workbench for Grep</h1>
         <div className="flex items-center gap-4">
           <div className="flex rounded border border-border overflow-hidden text-sm">
             {(["editor", "both", "results"] as ViewMode[]).map((m) => (

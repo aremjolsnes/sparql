@@ -8,7 +8,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SPARQL-workbench mot Grep",
+  title: "Grep: SPARQL-WB",
   description: "Skriv og kjør SPARQL-spørringer mot Grep-endepunkter.",
 };
 
