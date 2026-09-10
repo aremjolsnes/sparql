@@ -10,8 +10,13 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
+import FirstPasswordModal from "@/components/FirstPasswordModal";
 
-export type Profile = { email: string; role: "member" | "admin" };
+export type Profile = {
+  email: string;
+  role: "member" | "admin";
+  mustChangePassword: boolean;
+};
 
 type AuthState = {
   /** Supabase konfigurert i det hele tatt? */
@@ -23,6 +28,8 @@ type AuthState = {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   changePassword: (password: string) => Promise<{ error: string | null }>;
+  /** Kalles etter at brukeren har satt eget passord ved førstegangsinnlogging. */
+  clearMustChangePassword: () => Promise<void>;
 };
 
 const Ctx = createContext<AuthState | null>(null);
@@ -45,16 +52,20 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     try {
       const { data } = await getSupabase()
         .from("profiles")
-        .select("email, role")
+        .select("email, role, must_change_password")
         .eq("id", uid)
         .single();
       setProfile(
         data
-          ? { email: data.email as string, role: (data.role as Profile["role"]) ?? "member" }
-          : { email: "", role: "member" },
+          ? {
+              email: data.email as string,
+              role: (data.role as Profile["role"]) ?? "member",
+              mustChangePassword: Boolean(data.must_change_password),
+            }
+          : { email: "", role: "member", mustChangePassword: false },
       );
     } catch {
-      setProfile({ email: "", role: "member" });
+      setProfile({ email: "", role: "member", mustChangePassword: false });
     }
   }, []);
 
@@ -90,6 +101,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     return { error: error ? error.message : null };
   }, []);
 
+  const clearMustChangePassword = useCallback(async () => {
+    try {
+      await getSupabase().rpc("mark_password_changed");
+    } catch {
+      /* ignorér – flagget prøves igjen ved neste innlogging */
+    }
+    setProfile((p) => (p ? { ...p, mustChangePassword: false } : p));
+  }, []);
+
   const value = useMemo<AuthState>(
     () => ({
       enabled,
@@ -100,9 +120,25 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       signIn,
       signOut,
       changePassword,
+      clearMustChangePassword,
     }),
-    [enabled, loading, user, profile, session, signIn, signOut, changePassword],
+    [
+      enabled,
+      loading,
+      user,
+      profile,
+      session,
+      signIn,
+      signOut,
+      changePassword,
+      clearMustChangePassword,
+    ],
   );
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={value}>
+      {children}
+      <FirstPasswordModal />
+    </Ctx.Provider>
+  );
 }
