@@ -138,9 +138,42 @@ Mørkt tema. Ikke pixel-tro kopi av GraphDB – funksjonaliteten er det viktige.
 - Nettverksfeil mot endepunkt: tydelig melding.
 - Tegnsett: UTF-8 hele veien (æ ø å).
 
+## Innlogging, lagrede spørringer og fane-synk (lagt til)
+
+**Prinsipp:** appen er fortsatt **åpen** – innlogging er valgfritt og låser bare opp
+per-bruker-lagring. Ingen proxy/redirect-gating.
+
+**Auth:** Supabase Auth (e-post + passord), eget Supabase-prosjekt på Free-planen
+(org «Ares Grep-sparql», Frankfurt). Klient-side auth med `@supabase/ssr`.
+Miljøvariabler: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+`SUPABASE_SECRET_KEY`.
+
+**Brukere:** admin oppretter brukere på `/admin` med e-post + midlertidig passord
+(`auth.admin.createUser`), ingen invitasjons-e-post. Brukeren bytter passord selv via
+«Bytt passord» i topplinja. `aremjolsnes@gmail.com` tvinges til `admin` av DB-trigger.
+`/api/admin/users` er beskyttet med `Authorization: Bearer <access_token>` + admin-sjekk
+via secret-nøkkelen. Første admin må opprettes manuelt i Supabase (Auth → Users).
+
+**DB (Postgres + RLS «kun egne rader»):**
+- `profiles` (id = auth-bruker, email, role, created_at) – fylles av trigger på `auth.users`.
+- `saved_queries` (id, user_id, title, query, endpoint_name, created_at, updated_at).
+- `user_tabs` (user_id PK, data jsonb, active_id, updated_at) – hele fane-arrayen som blob.
+
+**Frontend:**
+- Innlogget: faner synkes til `user_tabs` (debouncet ~0,8 s); ved lasting vinner DB over
+  `localStorage`. Utlogget: `localStorage` som før.
+- «Lagre spørring» (tittel foreslått fra fanenavn / første linje) + «Lagrede»-nedtrekk i
+  editor-verktøylinja → åpner valgt spørring i **ny fane**, med lagret endepunkt hvis det
+  finnes. Overskriv / gi nytt navn / slett.
+
+**Drift:** `/api/health` gjør et lite DB-kall; `vercel.json` cron (`0 6 * * *`) kaller den
+daglig så gratis-Supabase ikke pauses etter 7 dager.
+
+Migrasjon: `supabase/migrations/001_auth_and_storage.sql`.
+
 ## Ute av scope (kan bygges ut senere)
 
-- Brukerhåndtering / innlogging.
+- Invitasjons-e-post (bruker admin-opprettet passord i stedet).
 - Test- og QA-endepunkter (VPN).
 - Klikk-sortering og kolonnefilter i resultattabellen.
 - Flere nedlastingsformater enn CSV.
