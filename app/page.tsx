@@ -9,6 +9,11 @@ import EndpointBar from "@/components/EndpointBar";
 import { BUILTIN_ENDPOINTS, DEFAULT_ENDPOINT_NAME, PAGE_SIZE, Endpoint } from "@/lib/endpoints";
 import { ensurePrefixes } from "@/lib/prefixes";
 import { SparqlResults, SparqlTerm, resultVars, toCsv } from "@/lib/sparql";
+import { useAuth } from "@/components/AuthProvider";
+import AuthBar from "@/components/AuthBar";
+import SavedQueriesMenu from "@/components/SavedQueriesMenu";
+import { SavedQuery } from "@/lib/savedQueries";
+import { loadRemoteTabs, saveRemoteTabs } from "@/lib/tabsSync";
 import {
   DEFAULT_QUERY,
   Tab,
@@ -72,6 +77,10 @@ export default function Page() {
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editorBoxRef = useRef<HTMLDivElement | null>(null);
 
+  const { enabled: authEnabled, user } = useAuth();
+  const [remoteReady, setRemoteReady] = useState(false);
+  const remoteSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     const t = loadTabs();
     setTabs(t.tabs);
@@ -124,6 +133,50 @@ export default function Page() {
     return () => ro.disconnect();
   }, [hydrated, viewMode]);
 
+  // ── Fane-synk mot Supabase når innlogget ──────────────────────────────────
+  useEffect(() => {
+    if (!authEnabled || !user || !hydrated) {
+      setRemoteReady(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const remote = await loadRemoteTabs();
+        if (cancelled) return;
+        if (remote && remote.tabs.length > 0) {
+          setTabs(remote.tabs);
+          setActiveId(
+            remote.activeId && remote.tabs.some((t) => t.id === remote.activeId)
+              ? remote.activeId
+              : remote.tabs[0].id,
+          );
+        } else {
+          await saveRemoteTabs(tabs, activeId);
+        }
+      } catch {
+        /* nettverk / manglende tabell – behold lokale faner */
+      } finally {
+        if (!cancelled) setRemoteReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authEnabled, user?.id, hydrated]);
+
+  useEffect(() => {
+    if (!authEnabled || !user || !remoteReady) return;
+    if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
+    remoteSaveTimer.current = setTimeout(() => {
+      saveRemoteTabs(tabs, activeId).catch(() => {});
+    }, 800);
+    return () => {
+      if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
+    };
+  }, [tabs, activeId, authEnabled, user, remoteReady]);
+
   const allEndpoints = useMemo<Endpoint[]>(
     () => [...BUILTIN_ENDPOINTS, ...custom],
     [custom],
@@ -167,6 +220,15 @@ export default function Page() {
 
   function renameTab(id: string, name: string | null) {
     setTabs((ts) => ts.map((t) => (t.id === id ? { ...t, name } : t)));
+  }
+
+  function openSavedInNewTab(sq: SavedQuery) {
+    const t: Tab = { id: newId(), name: sq.title, query: sq.query };
+    setTabs((ts) => [...ts, t]);
+    setActiveId(t.id);
+    if (sq.endpoint_name && allEndpoints.some((e) => e.name === sq.endpoint_name)) {
+      setEndpointName(sq.endpoint_name);
+    }
   }
 
   async function execute() {
@@ -298,9 +360,9 @@ export default function Page() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Topplinje */}
-      <header className="flex items-center justify-between gap-4 px-5 py-3 border-b border-border">
+      <header className="flex items-center justify-between gap-4 px-5 py-3 border-b border-border flex-wrap">
         <h1 className="text-lg font-semibold">SPARQL-workbench for Grep</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="flex rounded border border-border overflow-hidden text-sm">
             {(["editor", "both", "results"] as ViewMode[]).map((m) => (
               <button
@@ -322,6 +384,7 @@ export default function Page() {
             onSelect={setEndpointName}
             onSaveCustom={setCustom}
           />
+          <AuthBar />
         </div>
       </header>
 
@@ -356,13 +419,21 @@ export default function Page() {
               />
             </div>
             <div className="flex items-center justify-between gap-3 px-3 py-2 border border-t-0 border-border rounded-b bg-panel">
-              <span className="text-xs text-muted">
-                {notice ?? "Ctrl/⌘ + Enter for å kjøre · dra i nedre høyre hjørne for å endre høyden"}
-              </span>
+              <div className="flex items-center gap-3 min-w-0">
+                <SavedQueriesMenu
+                  currentQuery={activeTab.query}
+                  currentTitle={activeTab.name}
+                  currentEndpointName={selectedEndpoint.name}
+                  onOpen={openSavedInNewTab}
+                />
+                <span className="text-xs text-muted truncate hidden sm:block">
+                  {notice ?? "Ctrl/⌘ + Enter for å kjøre · dra i nedre høyre hjørne for høyde"}
+                </span>
+              </div>
               <button
                 onClick={execute}
                 disabled={run?.status === "running"}
-                className="bg-accent text-black rounded px-4 py-1.5 text-sm font-semibold hover:brightness-110 disabled:opacity-60"
+                className="bg-accent text-black rounded px-4 py-1.5 text-sm font-semibold hover:brightness-110 disabled:opacity-60 shrink-0"
               >
                 {run?.status === "running" ? "Kjører …" : "Kjør"}
               </button>
