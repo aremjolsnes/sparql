@@ -107,9 +107,8 @@ export async function POST(req: NextRequest) {
   clearTimeout(timer);
   const ms = Date.now() - started;
 
-  const text = await upstream.text();
-
   if (!upstream.ok) {
+    const text = await upstream.text().catch(() => "");
     return NextResponse.json(
       {
         error: text.slice(0, 4000) || `Endepunktet svarte med HTTP ${upstream.status}.`,
@@ -120,21 +119,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let data: unknown;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    return NextResponse.json(
-      { error: "Endepunktet svarte med noe annet enn JSON.", raw: text.slice(0, 4000), ms },
-      { status: 502 },
-    );
-  }
-
-  return NextResponse.json({
-    data,
-    ms,
-    capApplied,
-    rowCap: ROW_CAP,
-    effectiveQuery,
+  // Strøm resultatet rått videre til klienten – ingen bufring/reserialisering.
+  // Det unngår Vercels responsstørrelsesgrense og halverer minnebruken ved store svar.
+  // Metadata legges i headere.
+  return new Response(upstream.body, {
+    status: 200,
+    headers: {
+      "content-type":
+        upstream.headers.get("content-type") ?? "application/sparql-results+json; charset=utf-8",
+      "x-query-ms": String(ms),
+      "x-cap-applied": String(capApplied),
+      "x-row-cap": String(ROW_CAP),
+      "cache-control": "no-store",
+    },
   });
 }

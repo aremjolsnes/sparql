@@ -265,22 +265,43 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: selectedEndpoint.url, query: prepared }),
       });
-      const json = await res.json();
 
       if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
         setRuns((r) => ({
           ...r,
           [tab.id]: {
             ...r[tab.id]!,
             status: "error",
-            error: json.error ?? `HTTP ${res.status}`,
-            ms: json.ms ?? 0,
+            error: errJson.error ?? `HTTP ${res.status}`,
+            ms: errJson.ms ?? 0,
           },
         }));
         return;
       }
 
-      const data = json.data as SparqlResults;
+      // Suksess: body er rått SPARQL-resultat, metadata i headere.
+      const ms = Number(res.headers.get("x-query-ms")) || 0;
+      const capApplied = res.headers.get("x-cap-applied") === "true";
+      const rowCap = Number(res.headers.get("x-row-cap")) || 0;
+
+      const bodyText = await res.text();
+      let data: SparqlResults;
+      try {
+        data = JSON.parse(bodyText) as SparqlResults;
+      } catch {
+        setRuns((r) => ({
+          ...r,
+          [tab.id]: {
+            ...r[tab.id]!,
+            status: "error",
+            error: "Endepunktet svarte med noe annet enn JSON:\n\n" + bodyText.slice(0, 4000),
+            ms,
+          },
+        }));
+        return;
+      }
+
       let kind: Run["kind"] = "graph";
       let vars: string[] = [];
       let bindings: Record<string, SparqlTerm>[] = [];
@@ -305,10 +326,10 @@ export default function Page() {
           bindings,
           boolean: data?.boolean,
           rawText,
-          ms: json.ms ?? 0,
+          ms,
           ranAt: Date.now(),
-          capApplied: !!json.capApplied,
-          rowCap: json.rowCap ?? 0,
+          capApplied,
+          rowCap,
           page: 0,
         },
       }));
