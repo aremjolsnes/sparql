@@ -288,14 +288,14 @@ export default function Page() {
       }
 
       // Suksess: body er rått SPARQL-resultat, metadata i headere.
-      const ms = Number(res.headers.get("x-query-ms")) || 0;
-      const capApplied = res.headers.get("x-cap-applied") === "true";
-      const rowCap = Number(res.headers.get("x-row-cap")) || 0;
+      const hMs = Number(res.headers.get("x-query-ms")) || 0;
+      let capApplied = res.headers.get("x-cap-applied") === "true";
+      let rowCap = Number(res.headers.get("x-row-cap")) || 0;
 
       const bodyText = await res.text();
-      let data: SparqlResults;
+      let parsed: unknown;
       try {
-        data = JSON.parse(bodyText) as SparqlResults;
+        parsed = JSON.parse(bodyText);
       } catch {
         setRuns((r) => ({
           ...r,
@@ -303,11 +303,31 @@ export default function Page() {
             ...r[tab.id]!,
             status: "error",
             error: "Endepunktet svarte med noe annet enn JSON:\n\n" + bodyText.slice(0, 4000),
-            ms,
+            ms: hMs,
           },
         }));
         return;
       }
+
+      // Tål både rått resultat og det gamle {data, ms, capApplied}-formatet
+      // (i tilfelle klient og proxy er ute av synk mellom to deployer).
+      let data = parsed as SparqlResults;
+      const wrapper = parsed as {
+        data?: SparqlResults;
+        ms?: number;
+        capApplied?: boolean;
+        rowCap?: number;
+      };
+      if (
+        wrapper &&
+        wrapper.data &&
+        (wrapper.data.results !== undefined || typeof wrapper.data.boolean === "boolean")
+      ) {
+        data = wrapper.data;
+        if (typeof wrapper.capApplied === "boolean") capApplied = wrapper.capApplied;
+        if (typeof wrapper.rowCap === "number") rowCap = wrapper.rowCap;
+      }
+      const ms = hMs || (typeof wrapper?.ms === "number" ? wrapper.ms : 0);
 
       let kind: Run["kind"] = "graph";
       let vars: string[] = [];
