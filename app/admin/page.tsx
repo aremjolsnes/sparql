@@ -9,6 +9,8 @@ type AdminUser = {
   role: string;
   created_at: string;
   last_sign_in_at: string | null;
+  /** Har satt sitt eget passord = tatt tjenesten i bruk */
+  active: boolean;
 };
 
 export default function AdminPage() {
@@ -197,7 +199,20 @@ export default function AdminPage() {
           <tbody>
             {users.map((u) => (
               <tr key={u.id} className="border-t border-border">
-                <td className="px-3 py-2">{u.email}</td>
+                <td className="px-3 py-2">
+                  <span className="inline-flex items-center gap-1.5">
+                    {u.active && (
+                      <span
+                        title="Har satt eget passord – tatt tjenesten i bruk"
+                        aria-label="Aktiv bruker"
+                        style={{ color: "#3fb950" }}
+                      >
+                        ✓
+                      </span>
+                    )}
+                    {u.email}
+                  </span>
+                </td>
                 <td className="px-3 py-2">{u.role}</td>
                 <td className="px-3 py-2 text-muted">
                   {u.last_sign_in_at

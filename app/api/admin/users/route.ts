@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   const svc = secretClient();
   const [{ data: profiles }, listRes] = await Promise.all([
-    svc.from("profiles").select("id, email, role, created_at"),
+    svc.from("profiles").select("id, email, role, created_at, must_change_password"),
     svc.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
       role: p.role as string,
       created_at: p.created_at as string,
       last_sign_in_at: signInMap.get(p.id as string) ?? null,
+      active: p.must_change_password === false,
     }))
     .sort((a, b) => a.email.localeCompare(b.email));
 
