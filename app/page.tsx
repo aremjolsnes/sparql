@@ -70,6 +70,7 @@ export default function Page() {
   const [runs, setRuns] = useState<Record<string, Run>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editorBoxRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const t = loadTabs();
@@ -97,6 +98,31 @@ export default function Page() {
   useEffect(() => {
     if (hydrated) saveEndpointName(endpointName);
   }, [endpointName, hydrated]);
+
+  // Editorhøyde: bruk lagret verdi, og lagre når brukeren drar i hjørnet.
+  useEffect(() => {
+    if (!hydrated || viewMode === "results") return;
+    const el = editorBoxRef.current;
+    if (!el) return;
+    try {
+      const saved = Number(window.localStorage.getItem("sparql.editorHeight.v1"));
+      if (saved >= 140) el.style.height = `${saved}px`;
+    } catch {
+      /* ignorér */
+    }
+    const ro = new ResizeObserver(() => {
+      try {
+        window.localStorage.setItem(
+          "sparql.editorHeight.v1",
+          String(Math.round(el.getBoundingClientRect().height)),
+        );
+      } catch {
+        /* ignorér */
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [hydrated, viewMode]);
 
   const allEndpoints = useMemo<Endpoint[]>(
     () => [...BUILTIN_ENDPOINTS, ...custom],
@@ -270,7 +296,7 @@ export default function Page() {
   const showResults = viewMode !== "editor";
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col min-h-screen">
       {/* Topplinje */}
       <header className="flex items-center justify-between gap-4 px-5 py-3 border-b border-border">
         <h1 className="text-lg font-semibold">SPARQL-workbench mot Grep</h1>
@@ -311,16 +337,17 @@ export default function Page() {
         />
       </div>
 
-      <main className="flex-1 min-h-0 flex flex-col gap-3 p-5">
+      <main className="flex-1 flex flex-col gap-3 p-5">
         {/* Editor */}
         {showEditor && (
-          <section
-            className={
-              "flex flex-col border border-border rounded overflow-hidden " +
-              (viewMode === "both" ? "h-[38vh] shrink-0" : "flex-1 min-h-0")
-            }
-          >
-            <div className="flex-1 min-h-0">
+          <section className="flex flex-col">
+            <div
+              ref={editorBoxRef}
+              className={
+                "resize-y overflow-auto min-h-[140px] max-h-[85vh] border border-border rounded-t bg-panel " +
+                (showResults ? "h-80" : "h-[calc(100vh-13rem)]")
+              }
+            >
               <SparqlEditor
                 key={activeTab.id}
                 value={activeTab.query}
@@ -328,9 +355,9 @@ export default function Page() {
                 onRun={execute}
               />
             </div>
-            <div className="flex items-center justify-between gap-3 px-3 py-2 border-t border-border bg-panel">
+            <div className="flex items-center justify-between gap-3 px-3 py-2 border border-t-0 border-border rounded-b bg-panel">
               <span className="text-xs text-muted">
-                {notice ?? "Ctrl/⌘ + Enter for å kjøre"}
+                {notice ?? "Ctrl/⌘ + Enter for å kjøre · dra i nedre høyre hjørne for å endre høyden"}
               </span>
               <button
                 onClick={execute}
@@ -345,7 +372,7 @@ export default function Page() {
 
         {/* Resultater */}
         {showResults && (
-          <section className="flex-1 min-h-0 flex flex-col gap-2">
+          <section className="flex flex-col gap-2">
             {/* CSV + paginering */}
             <div className="flex items-center justify-between gap-3">
               <button
@@ -382,7 +409,7 @@ export default function Page() {
               </div>
             )}
 
-            <div className="flex-1 min-h-0 overflow-auto">
+            <div>
               {!run && (
                 <p className="text-muted text-sm">Kjør en spørring for å se resultater.</p>
               )}

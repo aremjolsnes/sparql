@@ -52,10 +52,10 @@ function Cell({ term }: { term: SparqlTerm | undefined }) {
 
 export default function ResultsTable({ vars, rows, startNumber }: Props) {
   return (
-    <div className="overflow-auto border border-border rounded">
+    <div className="overflow-x-auto border border-border rounded">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="bg-panel-2 sticky top-0 z-10">
+          <tr className="bg-panel-2">
             <th className="text-right px-3 py-2 border-b border-border text-muted font-medium w-12">
               #
             </th>
