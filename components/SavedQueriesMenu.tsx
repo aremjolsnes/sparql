@@ -129,7 +129,7 @@ export default function SavedQueriesMenu({
       </div>
 
       {open && (
-        <div className="absolute right-0 mt-1 w-96 max-h-[60vh] overflow-auto z-40 border border-border rounded bg-panel shadow-xl">
+        <div className="absolute left-0 bottom-full mb-1 w-96 max-w-[calc(100vw-2rem)] max-h-[50vh] overflow-auto z-40 border border-border rounded bg-panel shadow-xl">
           {loading && <div className="px-3 py-2 text-sm text-muted">Laster …</div>}
           {err && (
             <div className="px-3 py-2 text-sm" style={{ color: "var(--danger-fg)" }}>
