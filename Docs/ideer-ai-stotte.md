@@ -169,9 +169,117 @@ Fiks: cast rådataene til `xsd:date` *inni* COALESCE
 (faller trygt gjennom til fallback-verdien). Retestet fullt generert eksempel
 direkte mot Fuseki Beta – datofilteret gir nå faktiske treff.
 
-## 3. 🟡 Regex-hjelp
+## 3. 🔵 Regex-hjelp
 
 Regex er vanskelig å skrive riktig i FILTER/REGEX-uttrykk. Form for hjelp uklar ennå.
+
+**Konkretisert (2026-09-11):** i motsetning til idé 1/2/7 er dette den ideen
+som faktisk trenger et ekte LLM-kall (ikke bare regelbasert), siden
+brukerens intensjon her er fritekst («match koder som starter på NOR», «alle
+datoer i august») og ikke lar seg dekke av et fast snippet-mønster.
+Rate-limiting/misbruk er ikke en reell bekymring – appen har p.t. maks 3-4
+brukere (nærmeste kolleger).
+
+**Valgt trigger – `#+`-kommentarlinje med tema:**
+- Brukeren skriver `#+ regex: <beskrivelse>` eller `#+ filter: <beskrivelse>`
+  på egen linje i spørringen.
+- `#` er allerede kommentartegn i SPARQL, så linjen er gyldig/harmløs så
+  lenge den ikke fremkalles – akkurat som gyldighets-snippeten i idé 2 ikke
+  gjør noe før den velges.
+- Fremkalles manuelt med **Ctrl+Space** (samme mønster som idé 1/2), ikke
+  automatisk per tastetrykk – unngår AI-kall for hvert tastetrykk mens
+  brukeren fortsatt formulerer beskrivelsen. `CompletionSource` i
+  `@codemirror/autocomplete` støtter async/Promise, så AI-kallet kan henge
+  på samme completion-arkitektur som resten av `sparqlCompletion.ts` i
+  stedet for en egen knapp/UI.
+- **Avgrenset til v1:** kun temaene `regex:` og `filter:`
+  (`/^#\+\s*(regex|filter)\s*:\s*(.+)/i`). Flere temaer (f.eks. `semester:`
+  for idé 4/5, hvis de en dag trenger fritekst-tolkning) kan legges til
+  senere via samme mekanisme.
+- **Ingen fallback ved manglende/ukjent tema:** `#+ tekst uten tema` gir
+  ingen spesial-completion (faller tilbake til vanlig fullføring) – temaet
+  er påkrevd, ikke valgfritt med en default, for å unngå å gjette brukerens
+  intensjon.
+
+**Gjenstår før dette kan bygges:** ny API-route (LLM-provider/nøkkel ikke
+valgt ennå), promptdesign per tema (`regex:` → kun `regex(...)`-fragmentet;
+`filter:` → trolig en hel `FILTER`/`OPTIONAL`-blokk, jf. idé 2), og hvordan
+resultatet settes inn (sannsynligvis erstatning av hele `#+`-linjen, samme
+`apply`-funksjon-mønster som idé 2s snippet).
+
+**LLM-provider (2026-09-11):** Anthropic, gjenbruker en eksisterende
+API-nøkkel fra et annet privat prosjekt (samme nøkkel kan brukes i flere
+apper) – lagt til som `ANTHROPIC_API_KEY` i `.env.local`/`.env.example`.
+Modell: `claude-haiku-4-5-20251001` (billig/rask nok for en kort
+tekst-til-SPARQL-oversettelse).
+
+**Bygget:**
+- [app/api/ai-assist/route.ts](../app/api/ai-assist/route.ts) – tar
+  `{ topic, description, context }`, validerer tema (`regex`/`filter`,
+  ellers 400) og at beskrivelse ikke er tom, kaller Anthropics Messages API
+  direkte via `fetch` (ingen ny SDK-avhengighet) med et systemprompt som gir
+  faste prefikser og ber om rå SPARQL-tekst tilbake, ingen forklaring/
+  Markdown. Ingen auth/rate-limiting – urealistisk med 3-4 kjente brukere.
+  Mangler `ANTHROPIC_API_KEY` → 501, tydelig feilmelding.
+- [lib/aiAssist.ts](../lib/aiAssist.ts) – tynn klient-fetch mot ruten over.
+- [lib/sparqlCompletion.ts](../lib/sparqlCompletion.ts):
+  `aiAssistCompletionSource()` – matcher `#+ regex: <beskrivelse>`/
+  `#+ filter: <beskrivelse>` på kommentarlinja rett før cursor. Returnerer
+  `null` (ingen completion) hvis: ikke fremkalt med `context.explicit`
+  (Ctrl+Space), ukjent/manglende tema, eller tom beskrivelse – helt i tråd
+  med "ingen fallback"-valget over. Sender hele spørringsteksten før
+  `#+`-linja som kontekst (IKKE `currentBlock()`, som kutter ved siste "."
+  og dermed ville skjult nettopp den forutgående trippelen AI-en trenger for
+  å gjenkjenne variabler – dette var en reell bug funnet under testing, se
+  under). Ved treff: ett `options`-forslag som viser starten av det
+  genererte fragmentet i label, `apply` erstatter hele `#+`-linja med
+  fragmentet. Ved feil (nettverk, tom API-nøkkel, …): ett forslag som viser
+  feilmeldingen, med en no-op `apply` (linja endres ikke, så brukeren kan
+  prøve igjen).
+- [components/SparqlEditor.tsx](../components/SparqlEditor.tsx) – registrerer
+  begge completion-kildene som en liste (`autocomplete: [...]`), CodeMirror
+  slår dem sammen.
+
+**Verifisert:** typecheck + lint rent (samme 2 pre-eksisterende
+`react-hooks/refs`-feil i `SparqlEditor.tsx` som før, ingen nye – bekreftet
+ved å diffe `eslint .`-output mot main). Ingen ekte nettleser tilgjengelig i
+miljøet (samme sandboks-begrensning som idé 1/2). I stedet: (1) en
+mocket-fetch-test (`tsx`, midlertidig, fjernet igjen) av selve
+`aiAssistCompletionSource` med ekte `CompletionContext`/`EditorState`, som
+avdekket kontekst-buggen over (context var nesten tomt før fiksen) og
+bekreftet alle fire null-scenarioene (ikke explicit, ukjent tema, tom
+beskrivelse) samt at `apply` faktisk erstatter riktig `from`/`to`-område med
+det genererte fragmentet. (2) Et andre testløp kalte `POST` i
+`app/api/ai-assist/route.ts` direkte (uten å starte en full Next-server) med
+den ekte `ANTHROPIC_API_KEY` og fikk reelle, korrekte svar tilbake for begge
+temaer – `regex: "match koder som starter på NOR eller ENG"` ga
+`regex(str(?kode), "^(NOR|ENG)")` (gjenkjente `?kode` fra konteksten),
+`filter: "gyldigFra skal være før eller lik 2023-01-01"` ga
+`FILTER (?gyldigFra <= "2023-01-01"^^xsd:date)`. Ikke visuelt bekreftet i en
+faktisk nettleser (Ctrl+Space-fremkalling, dropdown-visning).
+
+**Bugfiks – to kilder som én array-verdi (Are, 2026-09-11):** Are testet i
+ekte nettleser og fikk `Runtime TypeError: Cannot read properties of
+undefined (reading 'length')` ved Ctrl+Space. Årsak: `SparqlEditor.tsx`
+registrerte begge fullførings-kildene som **én** verdi –
+`sparqlLanguage.data.of({ autocomplete: [sparqlCompletionSource(...),
+aiAssistCompletionSource()] }) ` – men `@codemirror/autocomplete` tolker en
+array-*verdi* på `autocomplete`-nøkkelen spesielt: den behandler den som en
+statisk liste av `Completion`-objekter (bygger en kilde via
+`completeFromList`), ikke som flere kilde-*funksjoner*. Siden elementene var
+funksjoner uten `.label`, krasjet biblioteket internt når det forsøkte å
+lese label-lengden. Riktig mønster (bekreftet med `state.languageDataAt(...)`
+i en `tsx`-test, midlertidig, fjernet igjen – ga to separate
+funksjons-verdier på posisjonen etter fiksen): **to separate**
+`sparqlLanguage.data.of({ autocomplete: … })`-extensions, én per kilde, ikke
+én extension med en array. Verdt å huske generelt: en array-verdi på et
+CodeMirror-language-data-felt kan bety noe helt annet enn "flere
+leverandører av samme felt", avhengig av hva feltet selv gjør med verdien.
+
+Retestet av Are etter fiksen: `#+ filter: alle ?k som begynner på NOR` →
+Ctrl+Space ga forslaget `FILTER(STRSTARTS(str(?k), "NOR"))`, og Enter satte
+det inn i stedet for kommentarlinja – bekreftet fungerende i ekte nettleser
+end-to-end.
 
 ## 4. 🟡 Bind semester til dato
 

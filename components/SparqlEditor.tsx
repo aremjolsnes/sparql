@@ -8,7 +8,7 @@ import { StreamLanguage } from "@codemirror/language";
 import { sparql } from "@codemirror/legacy-modes/mode/sparql";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { fetchOntologyTerms, type OntologyTerm } from "@/lib/ontologyTerms";
-import { sparqlCompletionSource } from "@/lib/sparqlCompletion";
+import { sparqlCompletionSource, aiAssistCompletionSource } from "@/lib/sparqlCompletion";
 
 // Modulnivå: samme Language-instans må brukes både som editor-extension og
 // for .data.of(...) under, ellers plukkes ikke fullførings-kilden opp.
@@ -44,8 +44,15 @@ export default function SparqlEditor({ value, onChange, onRun }: Props) {
       extensions: [
         basicSetup,
         sparqlLanguage,
+        // To separate .data.of(...)-extensions, ikke én med en array-verdi: CodeMirror
+        // tolker en array-verdi på "autocomplete" som en statisk Completion-liste
+        // (completeFromList), ikke som flere kilde-funksjoner – ga en runtime-krasj
+        // ("Cannot read properties of undefined (reading 'length')") i praksis.
         sparqlLanguage.data.of({
           autocomplete: sparqlCompletionSource(() => termsRef.current),
+        }),
+        sparqlLanguage.data.of({
+          autocomplete: aiAssistCompletionSource(),
         }),
         oneDark,
         EditorView.lineWrapping,

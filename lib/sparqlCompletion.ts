@@ -2,6 +2,7 @@ import { snippet } from "@codemirror/autocomplete";
 import type { Completion, CompletionContext, CompletionResult } from "@codemirror/autocomplete";
 import { FIXED_PREFIXES } from "@/lib/prefixes";
 import type { OntologyTerm } from "@/lib/ontologyTerms";
+import { requestAiSnippet, type AiAssistTopic } from "@/lib/aiAssist";
 
 const U = FIXED_PREFIXES.u;
 const localName = (uri: string) => (uri.startsWith(U) ? uri.slice(U.length) : uri);
@@ -142,5 +143,59 @@ export function sparqlCompletionSource(getTerms: () => OntologyTerm[]) {
     if (options.length === 0) return null;
 
     return { from: match.from + 2, options, validFor: /^[\w-]*$/ };
+  };
+}
+
+const AI_ASSIST_LABEL: Record<AiAssistTopic, string> = {
+  regex: "AI: generer regex fra beskrivelsen",
+  filter: "AI: generer FILTER fra beskrivelsen",
+};
+
+/**
+ * Idé 3 (se Docs/ideer-ai-stotte.md): `#+ regex: <beskrivelse>` eller
+ * `#+ filter: <beskrivelse>` på en kommentarlinje sender beskrivelsen til et
+ * LLM-kall (/api/ai-assist) og setter resultatet inn i stedet for linja.
+ * `#` er allerede SPARQL-kommentartegn, så linja gjør ingenting før den
+ * fremkalles. Kun manuell fremkalling (`context.explicit`, dvs. Ctrl+Space) –
+ * aldri automatisk mens brukeren fortsatt skriver beskrivelsen. Ukjent/
+ * manglende tema gir bevisst ingen completion (se diskusjon i idé 3).
+ */
+export function aiAssistCompletionSource() {
+  return async (context: CompletionContext): Promise<CompletionResult | null> => {
+    if (!context.explicit) return null;
+
+    const match = context.matchBefore(/#\+\s*(regex|filter)\s*:\s*.+/i);
+    if (!match) return null;
+
+    const parsed = /^#\+\s*(regex|filter)\s*:\s*(.+)$/i.exec(match.text);
+    if (!parsed) return null;
+    const topic = parsed[1].toLowerCase() as AiAssistTopic;
+    const description = parsed[2].trim();
+    if (!description) return null;
+
+    // Hele spørringsteksten før `#+`-linja, ikke bare currentBlock() (som kutter ved siste
+    // "." – for narrowt for et LLM-kall som skal gjenkjenne variabler fra tidligere tripler,
+    // i motsetning til idé 1/2s eksakte regelbaserte oppslag som trenger den narrowe scopen).
+    const precedingQuery = context.state.sliceDoc(0, match.from);
+
+    let option: Completion;
+    try {
+      const generated = await requestAiSnippet(topic, description, precedingQuery);
+      option = {
+        label: `${AI_ASSIST_LABEL[topic]}: ${generated.slice(0, 60)}`,
+        type: "keyword",
+        apply: (view, _completion, from, to) => {
+          view.dispatch({ changes: { from, to, insert: generated } });
+        },
+      };
+    } catch (e) {
+      option = {
+        label: `AI-kall feilet: ${(e as Error).message}`,
+        type: "keyword",
+        apply: () => {},
+      };
+    }
+
+    return { from: match.from, to: match.to, options: [option], filter: false };
   };
 }
