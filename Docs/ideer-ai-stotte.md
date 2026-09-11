@@ -42,12 +42,66 @@ med i forslaget, ingen properties lekker inn i klasse-forslag). Testfilene
 var midlertidige og er fjernet igjen; ikke visuelt bekreftet i en faktisk
 nettleser.
 
-## 2. 🟡 Gyldighet på koblinger, bNoder og filterhjelp
+## 2. 🔵 Gyldighet på koblinger, bNoder og filterhjelp
 
 Ref. [Grepwiki: Blanke noder for gyldighetsinformasjon i referanseobjekter](https://github.com/Utdanningsdirektoratet/Grep_SPARQL/wiki/Blanke-noder-for-gyldighetsinformasjon-i-referanseobjekter).
 
 Verktøystøtte for å skrive riktig SPARQL rundt gyldighet på koblinger og bNode-håndtering,
 inkl. hjelp til å formulere aktuelle FILTER-uttrykk i denne sammenhengen.
+
+**Bekreftet mot ekte data (2026-09-11):** spurte Fuseki Beta for properties som
+peker til bNoder – mønsteret `u:gyldighet-<referanse>-<kode>` er i aktiv bruk
+på tvers av mange ulike referanser (`opplaeringsfag`, `fagkode-referanser`,
+`laereplan-referanse`, `tilhoerende-kompetansemaalsett`, `bygger-paa-
+programomraade`, `benyttes-paa-aarstrinn`, …). Siden property-navnet er
+dynamisk generert per data-instans, kan det ikke slås opp i OWL-kunnskapen
+(idé 1/7) – men selve spørrings-*mønsteret* er alltid det samme.
+
+**Valgt løsning:** ikke fullføring, men en innsettbar **snippet** (samme sted
+som idé 1 – dukker opp som eget valg i `u:`-dropdownen i property-posisjon,
+merket «gyldighet-mønster»), med tab-stopp for kode og dato. Datofilteret
+(`gyldig-fra`/`gyldig-til` mot en gitt dato) er inkludert i snippeten, ikke
+en separat idé 5-lignende ting.
+
+**Bygget:** [lib/sparqlCompletion.ts](../lib/sparqlCompletion.ts) – bruker
+CodeMirrors innebygde `snippet()`-hjelper (@codemirror/autocomplete), med en
+egen `apply`-funksjon som fjerner det innskrevne `u:` og setter inn hele
+mønsteret i stedet. Vises alltid i property-posisjon (uavhengig av
+domain-innsnevring), ikke i type-posisjon (`a u:`).
+
+**Verifisert:** samme begrensning som idé 1 – ingen ekte nettleser tilgjengelig
+i miljøet. Kjørte i stedet en logikk-test (`tsx`, midlertidig, fjernet igjen)
+som bekrefter: (1) mønsteret vises IKKE i type-posisjon, (2) det vises i
+property-posisjon med riktig label/detail, (3) faktisk innsetting (simulert
+med en minimal `{state, dispatch}`-editor, siden `snippet()` ikke krever en
+ekte `EditorView`/DOM) gir korrekt SPARQL med riktig semikolon-fortsettelse.
+
+**Justert etter Ares egen bruk (2026-09-11):** i praksis er koden i
+regex()-en nesten alltid en variabel bundet fra det refererte objektet
+(`?of u:kode ?kode`), ikke en bokstavelig streng – Ares eget eksempel
+(`u:etter-fag ?of` → `?of u:kode ?kode` etterpå) viste dette. Endret derfor:
+- `regex(str(?gyldighetskobling), ?kode)` bruker nå en bar variabel, ikke
+  `"streng"`.
+- Snippeten legger til en bindingslinje `<referanse> u:kode ?kode .` på
+  slutten. `<referanse>` er et tab-stopp som **auto-utfylles** med den sist
+  bundne `?variabel`-en i blokka (f.eks. "?of" fra `u:etter-fag ?of` – samme
+  mekanisme som domain-gjenkjenningen i idé 1), med `?ref` som fallback når
+  ingenting gjenkjennes.
+
+Retestet med Ares eget eksempel (`tsx`, midlertidig): auto-utfylling til
+"?of" bekreftet korrekt. Selv testet Are deretter i ekte nettleser og lastet
+ned CSV med kolonnene `s,of,gyldighetskobling,bnode,gyldigFra,gyldigTil,kode`
+– stemmer nøyaktig med snippet-variablene, altså fungerer mønsteret i
+praksis.
+
+**Driftserfaring fra Are:** CSV-en over hadde flere tilsynelatende
+duplikat-rader (samme s/of/gyldighetskobling/gyldigFra/gyldigTil/kode, ulik
+`?bnode`) – klassisk "diamant"-effekt av å ha `?bnode` med i SELECT når flere
+blanke noder matcher samme mønster. Fiksen er å bruke en **eksplisitt
+kolonneliste i SELECT (ikke `*`, som automatisk tar med `?bnode`)** og utelate
+`?bnode`, gjerne kombinert med `SELECT DISTINCT`. Snippeten styrer ikke
+SELECT-klausulen selv, så dette er lagt inn som en påminnelse i
+`info`-teksten på fullførings-forslaget i stedet.
 
 ## 3. 🟡 Regex-hjelp
 
