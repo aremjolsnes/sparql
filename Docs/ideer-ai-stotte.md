@@ -103,6 +103,57 @@ kolonneliste i SELECT (ikke `*`, som automatisk tar med `?bnode`)** og utelate
 SELECT-klausulen selv, så dette er lagt inn som en påminnelse i
 `info`-teksten på fullførings-forslaget i stedet.
 
+**Debug-sesjon med Are (2026-09-11) – to lærdommer om OPTIONAL rundt mønsteret:**
+Are prøvde å gjøre hele gyldighets-sjekken `OPTIONAL` (for å ta med koblinger
+som helt mangler gyldighet, ikke bare de med delvis data) og støtte på to
+klassiske SPARQL-feller, begge verdt å huske for videre verktøybygging:
+1. En `#`-kommentar løper til linjeslutt – en glemt `}` etter en kommentert
+   FILTER-linje kommenteres også bort, som gir ubalanserte klammer.
+2. En variabel brukt i en `FILTER` *inni* en `OPTIONAL` må være bundet av noe
+   som står *før* OPTIONAL-en i samme blokk – et mønster som binder variabelen
+   *etter* OPTIONAL-en (tekstlig lenger nede) gjør at FILTER-et alltid feiler,
+   uten synlig feilmelding (stille, gale resultater – verre enn en krasj).
+
+Korrekt mønster (utenfor selve snippeten, siden det krever at brukeren
+allerede har bestemt seg for at *hele* koblingen skal være optional):
+```sparql
+?of u:kode ?kode .
+OPTIONAL {
+  ?s ?gyldighetskobling ?bnode .
+  FILTER isBlank(?bnode)
+  FILTER (regex(str(?gyldighetskobling), ?kode))
+  ?bnode u:gyldig-fra ?gyldigFra ;
+         u:gyldig-til ?gyldigTil .
+}
+```
+Utforsket videre om noen `u:laereplan_lk20` har *begge* deler (noen koblinger
+med og noen uten gyldighet for samme læreplan) – bekreftet empirisk at dette
+p.t. ikke finnes i dataene for `u:laereplan-referanse` spesifikt (kun 2
+koblinger uten gyldighet totalt, og ingen av dem deler læreplan med en annen
+kobling). Kontrollspørring med `GROUP BY … HAVING` for å sjekke dette i
+fremtiden er dokumentert i selve samtalen, ikke gjentatt her.
+
+**Utvidelse – nullpunkt/evighets-datoer for delvis manglende gyldighet
+(2026-09-11):** Are påpekte at når bNoden *finnes* men mangler `gyldig-fra`
+eller `gyldig-til` individuelt (ikke hele koblingen), kan vi binde fornuftige
+standardverdier i stedet for å la dem stå ubundet: `gyldig-fra` mangler →
+reformens nullpunkt (LK06: 2006-08-01, LK20: 2020-08-01), `gyldig-til`
+mangler → en «evighets»-dato (9999-12-31). Gjør etterfølgende dato-FILTER
+enklere (ingen egen håndtering av ubundne verdier).
+
+Bygget inn i samme snippet (ikke separat/idé 4-5): `u:gyldig-fra`/`u:gyldig-
+til` er nå hver for seg `OPTIONAL` (ikke hele mønsteret), med
+`BIND (COALESCE(...) AS ?gyldigFra/?gyldigTil)` rett etter. LK06/LK20
+gjenkjennes automatisk fra `a u:*_lk20` i blokka (samme mekanisme som
+refVar-gjenkjenningen), LK06 er fallback. **Dette dekker fortsatt ikke**
+tilfellet der bNoden mangler helt – det er den separate OPTIONAL-rundt-alt-
+varianten over, som snippeten ikke bygger automatisk (bevisst valgt scope).
+
+Verifisert: logikk-test (`tsx`, midlertidig) bekrefter riktig
+2006-08-01/2020-08-01-valg per kontekst, og et komplett generert eksempel
+kjørt direkte mot Fuseki Beta ga ekte gyldig-fra/-til-verdier (ingen
+syntaksfeil).
+
 ## 3. 🟡 Regex-hjelp
 
 Regex er vanskelig å skrive riktig i FILTER/REGEX-uttrykk. Form for hjelp uklar ennå.

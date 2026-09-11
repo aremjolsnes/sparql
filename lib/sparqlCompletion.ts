@@ -6,6 +6,11 @@ import type { OntologyTerm } from "@/lib/ontologyTerms";
 const U = FIXED_PREFIXES.u;
 const localName = (uri: string) => (uri.startsWith(U) ? uri.slice(U.length) : uri);
 
+/** Nullpunkt-datoer for koblinger der bNoden finnes, men mangler gyldig-fra/-til (Are, 2026-09-11). */
+const LK06_EPOCH = "2006-08-01";
+const LK20_EPOCH = "2020-08-01";
+const EVIGHET = "9999-12-31";
+
 /**
  * Idé 2 (se Docs/ideer-ai-stotte.md): mønster for koblinger som selv har en
  * gyldighetsperiode (ikke objektene i seg selv), jf. Grepwiki "Blanke noder
@@ -21,14 +26,26 @@ const localName = (uri: string) => (uri.startsWith(U) ? uri.slice(U.length) : ur
  * referanse-variabelen med den sist bundne `?var`-en i gjeldende blokk (f.eks.
  * "?of" fra "u:etter-fag ?of"), som tab-stopp – bommer den, kan brukeren bare
  * skrive over.
+ *
+ * u:gyldig-fra/-til er hver for seg gjort optional: en funnet bNode kan
+ * mangle den ene datoen. Manglende gyldig-fra COALESCE'es til reformens
+ * nullpunkt (LK06: 2006-08-01, LK20: 2020-08-01 – gjenkjent fra `a u:*_lk20`
+ * i blokka, ellers LK06), manglende gyldig-til til en «evighets»-dato
+ * (9999-12-31), så FILTER-et under kan sammenligne uten å håndtere ubundne
+ * verdier separat. Dette dekker IKKE tilfellet der koblingen mangler helt
+ * (ingen bNode i det hele tatt) – det krever å pakke hele mønsteret inn i en
+ * egen OPTIONAL rundt subjektet, som denne snippeten ikke gjør automatisk.
  */
-function buildGyldighetSnippetTemplate(refVar: string): string {
+function buildGyldighetSnippetTemplate(refVar: string, lk20: boolean): string {
+  const epoch = lk20 ? LK20_EPOCH : LK06_EPOCH;
   return [
     "?gyldighetskobling ?bnode .",
     "FILTER isBlank(?bnode)",
     "FILTER (regex(str(?gyldighetskobling), ?kode))",
-    "?bnode u:gyldig-fra ?gyldigFra ;",
-    "    u:gyldig-til ?gyldigTil .",
+    "OPTIONAL { ?bnode u:gyldig-fra ?gyldigFraRaa . }",
+    "OPTIONAL { ?bnode u:gyldig-til ?gyldigTilRaa . }",
+    `BIND (COALESCE(?gyldigFraRaa, "${epoch}"^^xsd:date) AS ?gyldigFra)`,
+    `BIND (COALESCE(?gyldigTilRaa, "${EVIGHET}"^^xsd:date) AS ?gyldigTil)`,
     'FILTER (?gyldigFra <= "${dato}"^^xsd:date && ?gyldigTil >= "${dato}"^^xsd:date)',
     `\${${refVar}} u:kode ?kode .\${}`,
   ].join("\n");
@@ -102,12 +119,13 @@ export function sparqlCompletionSource(getTerms: () => OntologyTerm[]) {
         label: "gyldighet-mønster",
         type: "keyword",
         detail: "sett inn kobling-gyldighetssjekk (bNode)",
-        info: "For koblinger som selv har en gyldighetsperiode, ikke objektene i seg selv – se Grepwiki: Blanke noder for gyldighetsinformasjon i referanseobjekter. OBS: bruk en eksplisitt kolonneliste i SELECT (ikke *) og utelat ?bnode – ellers kan flere blanke noder med samme innhold gi tilsynelatende like rader som bare skiller seg på bnode-id. Vurder også SELECT DISTINCT.",
+        info: "For koblinger som selv har en gyldighetsperiode, ikke objektene i seg selv – se Grepwiki: Blanke noder for gyldighetsinformasjon i referanseobjekter. Manglende gyldig-fra/-til på en funnet bNode fylles ut med reformens nullpunkt (LK06/LK20, gjenkjent fra typen) og en evighets-dato. OBS: bruk en eksplisitt kolonneliste i SELECT (ikke *) og utelat ?bnode – ellers kan flere blanke noder med samme innhold gi tilsynelatende like rader som bare skiller seg på bnode-id. Vurder også SELECT DISTINCT.",
         boost: 2,
         apply: (view, completion, _from, to) => {
           const block = currentBlock(view.state.sliceDoc(0, match.from));
           const refVar = lastObjectVariable(block) ?? "?ref";
-          snippet(buildGyldighetSnippetTemplate(refVar))(view, completion, match.from, to);
+          const lk20 = declaredTypeUris(block).some((uri) => uri.endsWith("_lk20"));
+          snippet(buildGyldighetSnippetTemplate(refVar, lk20))(view, completion, match.from, to);
         },
       });
     }
