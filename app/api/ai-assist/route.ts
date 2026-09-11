@@ -78,7 +78,17 @@ ${PREFIX_LINES}
 
 Brukeren har skrevet en fritekst-beskrivelse av hva de vil filtrere/matche på. Du skal IKKE
 forklare noe, IKKE bruke Markdown-kodeblokker eller \`-tegn, og IKKE gjenta konteksten – svar
-med RÅ SPARQL-tekst som kan settes rett inn i editoren i stedet for beskrivelsen, ingenting annet.`;
+med RÅ SPARQL-tekst som kan settes rett inn i editoren i stedet for beskrivelsen, ingenting annet.
+
+Viktig presisjon: det literale ordet UNDEF finnes KUN som gyldig syntaks inni en VALUES-blokk.
+Bruk det ALDRI andre steder (f.eks. som gren i IF(...) eller COALESCE(...)) – det gir parse
+error, selv om det virker som et naturlig "ingen verdi"-uttrykk. Trenger du en betinget ubundet
+variabel (BIND(IF(vilkår, ?verdi-hvis-sant, <et-fall-tilbake>) AS ?resultat)), er riktig
+SPARQL-idiom å referere til en variabel som IKKE er bundet noe annet sted i spørringen – det gir
+en evalueringsfeil som lar ?resultat forbli ubundet for den raden uten at hele spørringen feiler.
+Eksempel: BIND(IF(regex(str(?k), "^NOR"), ?k, ?ub) AS ?kode) – ikke BIND(IF(..., ?k, UNDEF) AS
+?kode). Hvis brukerens beskrivelse egentlig handler om å ekskludere rader (ikke om en betinget
+binding), er et vanlig FILTER ofte enklere og riktigere enn IF/BIND-trikset over.`;
 
   let upstream: Response;
   try {

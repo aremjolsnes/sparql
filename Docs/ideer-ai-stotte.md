@@ -299,6 +299,26 @@ Verifisert med ekte kall mot Anthropic (`tsx`, midlertidig, fjernet igjen):
 - `regex: "lag et filter som sjekker om kode starter på NOR"` →
   `FILTER(regex(str(?kode), "^NOR"))`.
 
+**Bugfiks – hallusinert `UNDEF` utenfor VALUES (Are, 2026-09-11):** Ares
+beskrivelse "?k starter på NOR eller ENG, ... og binde det til ?kode" (en
+reell betinget-binding-bruk av `regex:`-fleksibiliteten over) ga
+`BIND(IF(regex(str(?k), "^(NOR|ENG)", "i"), ?k, UNDEF) AS ?kode)` –
+parse error i praksis. `UNDEF` er kun gyldig syntaks inni en `VALUES`-blokk,
+ikke som en generell "ingen verdi"-gren i `IF(...)`/`COALESCE(...)`, men
+Haiku hallusinerte det som om det var lovlig der. En første promptfiks (bare
+en advarsel om at `UNDEF` er begrenset til `VALUES`) var IKKE nok – samme
+feil gjentok seg uendret ved retest. Det som faktisk virket: gi modellen et
+konkret korrekt eksempel å følge i stedet for en abstrakt regel – riktig
+SPARQL-idiom for en betinget ubundet variabel er å referere til en variabel
+som ikke er bundet noe annet sted i spørringen (gir en evalueringsfeil som
+lar `BIND`-målet forbli ubundet for raden, uten at hele spørringen feiler).
+Lagt inn i systemprompten med eksplisitt eksempel
+(`BIND(IF(vilkår, ?k, ?ub) AS ?kode)`, ikke `UNDEF`). Retestet med Ares
+eksakte beskrivelse (`tsx`, midlertidig, fjernet igjen): ga nå
+`BIND(IF(regex(str(?k), "^(NOR|ENG)", "i"), ?k, ?ubundet) AS ?kode)` – gyldig
+SPARQL. Regresjonstestet samtidig at default-regex og filter-temaet fortsatt
+ga riktige svar som før.
+
 ## 4. 🟡 Bind semester til dato
 
 Vårsemester: åååå-01-01 til åååå-07-31. Høstsemester: åååå-08-01 til åååå-12-31
