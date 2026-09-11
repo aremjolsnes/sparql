@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "import-ontology": "node --env-file=.env.local scripts/import-ontology.mjs"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.11.0",
     "@codemirror/language": "^6.12.4",
     "@codemirror/legacy-modes": "^6.5.4",
@@ -29,6 +31,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "n3": "^2.7.12",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

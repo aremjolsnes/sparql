@@ -7,6 +7,12 @@ import { basicSetup } from "codemirror";
 import { StreamLanguage } from "@codemirror/language";
 import { sparql } from "@codemirror/legacy-modes/mode/sparql";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { fetchOntologyTerms, type OntologyTerm } from "@/lib/ontologyTerms";
+import { sparqlCompletionSource } from "@/lib/sparqlCompletion";
+
+// Modulnivå: samme Language-instans må brukes både som editor-extension og
+// for .data.of(...) under, ellers plukkes ikke fullførings-kilden opp.
+const sparqlLanguage = StreamLanguage.define(sparql);
 
 type Props = {
   value: string;
@@ -22,6 +28,13 @@ export default function SparqlEditor({ value, onChange, onRun }: Props) {
   const onRunRef = useRef(onRun);
   onChangeRef.current = onChange;
   onRunRef.current = onRun;
+  const termsRef = useRef<OntologyTerm[]>([]);
+
+  useEffect(() => {
+    fetchOntologyTerms().then((terms) => {
+      termsRef.current = terms;
+    });
+  }, []);
 
   useEffect(() => {
     if (!host.current) return;
@@ -30,7 +43,10 @@ export default function SparqlEditor({ value, onChange, onRun }: Props) {
       doc: value,
       extensions: [
         basicSetup,
-        StreamLanguage.define(sparql),
+        sparqlLanguage,
+        sparqlLanguage.data.of({
+          autocomplete: sparqlCompletionSource(() => termsRef.current),
+        }),
         oneDark,
         EditorView.lineWrapping,
         // Prec.highest slår basicSetup sin defaultKeymap, som ellers binder

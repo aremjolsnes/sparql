@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# rå OWL-kilde (idé 7, Docs/ideer-ai-stotte.md) – skal ikke committes rått,
+# kun et kuratert JSON-uttrekk generert av /scripts (når det finnes)
+Docs/*.ttl
