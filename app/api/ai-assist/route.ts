@@ -17,8 +17,10 @@ const PREFIX_LINES = Object.entries(FIXED_PREFIXES)
 
 const TOPIC_INSTRUCTIONS: Record<Topic, string> = {
   regex:
-    'Svar med KUN et regex(...)-uttrykk (SPARQL-funksjonen), f.eks. regex(str(?kode), "^NOR"). ' +
-    "Ikke pakk det inn i FILTER(...) selv, og ikke skriv noe annet enn selve uttrykket.",
+    'Som standard: svar med KUN et regex(...)-uttrykk (SPARQL-funksjonen), f.eks. regex(str(?kode), "^NOR") ' +
+    "– ikke pakk det inn i FILTER(...) eller BIND(...) selv. MEN: hvis beskrivelsen eksplisitt ber om noe " +
+    "annet – f.eks. å binde resultatet til en variabel, eller pakke det som et filter – følg det i stedet. " +
+    "Ikke skriv noe annet enn selve SPARQL-fragmentet uansett.",
   filter:
     "Svar med KUN en komplett FILTER(...)-linje. Hvis den trenger støtte fra BIND/OPTIONAL " +
     "rundt seg (som i eksisterende mønstre i konteksten under), kan du inkludere disse linjene også.",

@@ -281,6 +281,24 @@ Ctrl+Space ga forslaget `FILTER(STRSTARTS(str(?k), "NOR"))`, og Enter satte
 det inn i stedet for kommentarlinja – bekreftet fungerende i ekte nettleser
 end-to-end.
 
+**Justert etter Ares egen bruk (2026-09-11):** `#+ regex:` gir med vilje det
+bare `regex(...)`-uttrykket – satt inn direkte som egen linje i en
+WHERE-blokk er det ugyldig SPARQL (`regex(...)` må stå inni `FILTER(...)`
+eller `BIND(...)`), noe Are traff på i praksis (parse error). Ikke en bug,
+men et reelt forventningsgap: i stedet for å holde `regex:`/`filter:` som to
+strengt adskilte formater, lot vi promptet for `regex:` følge beskrivelsen
+hvis den selv sier hva resultatet skal brukes til – binding til en variabel,
+eller pakket som filter – og ellers falle tilbake til det bare uttrykket.
+`filter:`-temaet er uendret (alltid en komplett `FILTER(...)`-linje).
+
+Verifisert med ekte kall mot Anthropic (`tsx`, midlertidig, fjernet igjen):
+- `regex: "kode starter på NOR eller ENG"` (ingen ønsket bruk nevnt) →
+  `regex(str(?kode), "^(NOR|ENG)")` (bart uttrykk, som før).
+- `regex: "bind resultatet av å matche kode mot '^NOR' til variabelen
+  ?erNorsk"` → `BIND(regex(str(?kode), "^NOR") AS ?erNorsk)`.
+- `regex: "lag et filter som sjekker om kode starter på NOR"` →
+  `FILTER(regex(str(?kode), "^NOR"))`.
+
 ## 4. 🟡 Bind semester til dato
 
 Vårsemester: åååå-01-01 til åååå-07-31. Høstsemester: åååå-08-01 til åååå-12-31
