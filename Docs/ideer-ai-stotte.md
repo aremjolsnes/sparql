@@ -334,6 +334,38 @@ beskrivelsen fremover: skriv "filtrer på …" når du vil ekskludere rader,
 reserver "bind … til" for når du faktisk vil beholde alle radene og legge
 på en utledet verdi (f.eks. et sant/usant-flagg).
 
+**Hjelpeside (2026-09-11):** [app/hjelp/page.tsx](../app/hjelp/page.tsx) –
+statisk side som beskriver og gir eksempler for alle tre støtteverktøyene
+(u:-fullføring, gyldighet-mønster, `#+ regex:`/`#+ filter:`), inkl.
+fallgruven over. Lenket fra et «(?)»-ikon i toppmenyen i
+[app/page.tsx](../app/page.tsx) (åpner i ny fane).
+
+**Verifisert:** typecheck + lint rent (samme 8 pre-eksisterende feil som før
+– inkl. én i `app/profil/page.tsx` for nøyaktig samme `<a href="/">`-mønster
+jeg først kopierte inn i den nye sida, fikset til `next/link`s `<Link>` der
+i stedet for å gjenta den pre-eksisterende feilen). Hentet `/hjelp` og `/`
+via `curl` mot den kjørende dev-serveren (localhost:3000) – begge svarer
+200, og forventet innhold (bl.a. "Fallgruve", "erNordisk") er med i
+HTML-en. Siden hovedsiden er en client component som kun server-rendrer en
+"Laster …"-tilstand, kunne ikke selve «(?)»-lenken bekreftes med `curl` –
+samme sandboks-begrensning som resten av idé 3 (ingen ekte nettleser
+tilgjengelig). Ikke visuelt bekreftet.
+
+**Flere `#+`-temaer å vurdere (forslag, ikke bygget, 2026-09-11):**
+- `semester:` – direkte kobling til idé 4/5 under (semester→dato-binding).
+  Kunne gjenbrukt denne mekanismen i stedet for separat regelbasert logikk,
+  men idé 4/5s åpne punkt om datointervall må avklares først.
+- `optional:` – adresserer de to SPARQL-fellene fra idé 2s debug-sesjon
+  (kommentar som sluker en `}`, FILTER som refererer en variabel bundet
+  *etter* OPTIONAL – stille, gale resultater). Vurdert som mest verdt å
+  bygge av forslagene under, siden den treffer et reelt, dokumentert
+  feilmønster.
+- `path:` – property paths (`+`, `*`, `?`, `/`, `|`, `^`) er fiffig syntaks
+  å huske riktig.
+- `values:` – bygge en `VALUES ?var { … }`-blokk fra en fritekst-liste med
+  koder.
+- `order:` – `ORDER BY`-uttrykk fra en beskrivelse av ønsket sortering.
+
 ## 4. 🟡 Bind semester til dato
 
 Vårsemester: åååå-01-01 til åååå-07-31. Høstsemester: åååå-08-01 til åååå-12-31
