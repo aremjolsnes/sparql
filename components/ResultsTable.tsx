@@ -1,6 +1,7 @@
 "use client";
 
 import { SparqlTerm } from "@/lib/sparql";
+import { shortenUri } from "@/lib/prefixes";
 
 type Props = {
   vars: string[];
@@ -18,14 +19,16 @@ function Cell({ term }: { term: SparqlTerm | undefined }) {
   if (!term) return <span className="text-muted">–</span>;
 
   if (term.type === "uri") {
+    const short = shortenUri(term.value);
     return (
       <a
         href={term.value}
         target="_blank"
         rel="noreferrer"
+        title={short !== term.value ? term.value : undefined}
         className="text-link hover:underline break-all"
       >
-        {term.value}
+        {short}
       </a>
     );
   }

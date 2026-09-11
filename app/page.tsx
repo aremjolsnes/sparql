@@ -222,13 +222,12 @@ export default function Page() {
     setTabs((ts) => ts.map((t) => (t.id === id ? { ...t, name } : t)));
   }
 
+  // Idé 8 (se Docs/ideer-ai-stotte.md): lagret endepunkt er informativt, ikke styrende –
+  // bytter ikke aktivt endepunkt automatisk. Man velger selv endepunkt og trykker «Kjør».
   function openSavedInNewTab(sq: SavedQuery) {
     const t: Tab = { id: newId(), name: sq.title, query: sq.query };
     setTabs((ts) => [...ts, t]);
     setActiveId(t.id);
-    if (sq.endpoint_name && allEndpoints.some((e) => e.name === sq.endpoint_name)) {
-      setEndpointName(sq.endpoint_name);
-    }
   }
 
   async function execute() {

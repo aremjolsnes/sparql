@@ -121,7 +121,9 @@ Mørkt tema. Ikke pixel-tro kopi av GraphDB – funksjonaliteten er det viktige.
 - **CONSTRUCT / DESCRIBE:** vis rå respons med en melding om at grafresultat ikke tabuleres
   (kan bygges ut senere).
 - Celler:
-  - IRI: vis verdien, gjør den klikkbar.
+  - IRI: vis forkortet form (`prefiks:lokalnavn`, kjente prefikser inkl. kjente
+    endepunkt-varianter av `st:`) i tabellen, gjør den klikkbar mot full URI (`title`
+    viser full URI ved hover). CSV-eksport bruker fortsatt full URI, ikke forkortet form.
   - Typet literal: vis verdi (evt. med datatype-indikator).
   - Literal med språktagg: vis verdi med `@nb`-tagg.
   - Ubundet variabel: tom celle.
@@ -163,8 +165,10 @@ via secret-nøkkelen. Første admin må opprettes manuelt i Supabase (Auth → U
 - Innlogget: faner synkes til `user_tabs` (debouncet ~0,8 s); ved lasting vinner DB over
   `localStorage`. Utlogget: `localStorage` som før.
 - «Lagre spørring» (tittel foreslått fra fanenavn / første linje) + «Lagrede»-nedtrekk i
-  editor-verktøylinja → åpner valgt spørring i **ny fane**, med lagret endepunkt hvis det
-  finnes. Overskriv / gi nytt navn / slett.
+  editor-verktøylinja → åpner valgt spørring i **ny fane**. `endpoint_name` lagres og vises
+  som informasjon under tittelen, men styrer ikke lenger aktivt endepunkt ved åpning – man
+  velger selv endepunkt og trykker «Kjør» (idé 8, se Docs/ideer-ai-stotte.md). Overskriv /
+  gi nytt navn / slett.
 
 **Drift:** `/api/health` gjør et lite DB-kall; `vercel.json` cron (`0 6 * * *`) kaller den
 daglig så gratis-Supabase ikke pauses etter 7 dager.

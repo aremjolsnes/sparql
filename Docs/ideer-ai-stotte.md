@@ -437,11 +437,31 @@ begge domene-variantene: `semester_hoest_2007` → `2007-08-01`,
 år/rader) – riktig utregnet i alle tilfeller, og FILTER mot en gitt dato
 returnerte kun rader der spennet faktisk dekker datoen.
 
-## 6. 🟡 Prefiks i tabell, hel URI i CSV
+## 6. 🔵 Prefiks i tabell, hel URI i CSV
 
 Vis forkortet form (`d:NOR01-07`) for URI-er i resultattabellen, men full URI ved
-CSV-eksport. Avviker fra dagens spec (§ Resultathåndtering), som ikke sier noe om
-forkortning i tabellvisning – må avklares mot cellevisnings-reglene der.
+CSV-eksport.
+
+**Avklart mot Are (2026-09-11):** alle tre endepunktene er strukturelt like, så
+forkortingen trenger ikke vite hvilket endepunkt resultatet kom fra – det holder å
+kjenne igjen alle kjente prefiks-*varianter* (i dag `st:`s to endepunkt-varianter,
+se `KNOWN_PREFIX_VARIANTS` i `lib/prefixes.ts`) i én delt tabell, i stedet for å
+tre endepunkt-state inn i resultattabell-komponenten.
+
+**Bygget:** `shortenUri()` i [lib/prefixes.ts](../lib/prefixes.ts) – lengste
+matchende kjente prefiks-verdi (faste prefikser + alle kjente varianter) vinner,
+returnerer URI-en uendret hvis ingen matcher eller lokalnavnet ville blitt tomt.
+Brukt kun som visningstekst i `Cell` i
+[components/ResultsTable.tsx](../components/ResultsTable.tsx) – `href` peker
+fortsatt til full URI, og en `title` med full URI vises ved hover når teksten er
+forkortet. CSV-eksport (`toCsv` i `lib/sparql.ts`) var allerede uendret av dette –
+den brukte alltid `.value` (full URI) direkte, ingen kode å endre der.
+Spec oppdatert (§ Resultathåndtering, § Innlogging) for å matche.
+
+**Verifisert:** typecheck + lint rent (samme 8 pre-eksisterende feil). Egen
+sanity-test (`tsx`, midlertidig, fjernet igjen) av `shortenUri()` mot 7 tilfeller
+– begge `st:`-variantene, alle faste prefikser, en urelatert URI (uendret) og en
+URI uten lokalnavn (uendret) – alle 7 passerte.
 
 ## 7. 🔵 Bygg inn OWL-kunnskap (labels/definisjoner)
 
@@ -450,12 +470,24 @@ definisjoner/beskrivelser ment for menneskelig forståelse av typer og egenskape
 Ønske: gjøre denne kunnskapen tilgjengelig for AI-støtten i appen (f.eks. som kontekst
 til idé 1 og 2), uten å committe selve OWL-filene til repoet.
 
-## 8. 🟡 «Lagrede» spørringer trenger ikke fast endepunkt
+## 8. 🔵 «Lagrede» spørringer trenger ikke fast endepunkt
 
 I dag lagres `endpoint_name` sammen med spørringen (spesifikasjon.md § Innlogging).
 Forslag: gjør lagring av endepunkt valgfri/informativ snarere enn styrende – man
-velger uansett endepunkt på nytt når man trykker «Kjør». Trenger avklaring av hva
-som skal skje med feltet som allerede finnes i `saved_queries.endpoint_name`.
+velger uansett endepunkt på nytt når man trykker «Kjør».
+
+**Avklart:** feltet `saved_queries.endpoint_name` beholdes uendret (ingen
+DB-migrasjon) – det er kun *lese*-siden (hva som skjer når en lagret spørring
+åpnes) som endres. Skriving (Lagre/Overskriv) og visning (grå tekst under
+tittelen i «Lagrede»-lista) er uendret.
+
+**Bygget:** [app/page.tsx](../app/page.tsx) – `openSavedInNewTab` kaller ikke
+lenger `setEndpointName(sq.endpoint_name)`. Én linje fjernet, resten av
+funksjonen (ny fane, aktiver den) uendret. Spec oppdatert (§ Innlogging).
+
+**Verifisert:** typecheck + lint rent (samme 8 pre-eksisterende feil). Ren
+kodefjerning uten ny logikk å teste isolert – ikke visuelt bekreftet i en
+faktisk nettleser (samme miljøbegrensning som resten av loggen).
 
 ---
 

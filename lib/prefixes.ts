@@ -54,6 +54,36 @@ function usedPrefixes(strippedQuery: string): Set<string> {
   return set;
 }
 
+/**
+ * Idé 6 (se Docs/ideer-ai-stotte.md): alle kjente prefiks-verdier å forkorte
+ * mot – faste prefikser pluss alle kjente varianter (i dag kun de to
+ * `st:`-variantene). Uavhengig av hvilket endepunkt resultatet kom fra: alle
+ * tre endepunktene er strukturelt like, så det holder å kjenne igjen enhver
+ * kjent variant i stedet for å tre inn hvilket endepunkt som faktisk ble
+ * brukt.
+ */
+const SHORTEN_TABLE: [prefix: string, value: string][] = [
+  ...Object.entries(FIXED_PREFIXES),
+  ...Object.entries(KNOWN_PREFIX_VARIANTS).flatMap(([p, variants]) =>
+    variants.map((v): [string, string] => [p, v]),
+  ),
+].sort((a, b) => b[1].length - a[1].length); // lengste verdi (mest spesifikk) sjekkes først
+
+/**
+ * Forkorter en URI til `prefiks:lokalnavn` for visning, f.eks.
+ * `http://psi.udir.no/kl06/NOR01-07` → `d:NOR01-07`. Ren visningsfunksjon –
+ * rører ikke selve URI-en (brukt til `href`/CSV som før). Returnerer URI-en
+ * uendret hvis ingen kjent prefiks matcher, eller hvis lokalnavnet er tomt.
+ */
+export function shortenUri(uri: string): string {
+  for (const [prefix, value] of SHORTEN_TABLE) {
+    if (uri.startsWith(value) && uri.length > value.length) {
+      return `${prefix}:${uri.slice(value.length)}`;
+    }
+  }
+  return uri;
+}
+
 function escapeRe(s: string): string {
   return s.replace(/[-[\]/{}()*+?.\\^$|]/g, "\\$&");
 }
