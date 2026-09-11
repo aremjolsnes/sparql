@@ -319,6 +319,21 @@ eksakte beskrivelse (`tsx`, midlertidig, fjernet igjen): ga nå
 SPARQL. Regresjonstestet samtidig at default-regex og filter-temaet fortsatt
 ga riktige svar som før.
 
+**Driftserfaring fra Are – "filtrer" vs. "binde" i beskrivelsen
+(2026-09-11):** den gyldige `BIND(IF(regex(...), ?k, ?ubundet) AS ?kode)`
+over gir *ikke* det man intuitivt venter av "koder som starter på NOR/ENG".
+`BIND`/`IF` ekskluderer ingen rader – den kjører for hver eneste `?s`/`?k`,
+og lar bare `?kode` stå ubundet (vist som "–" i resultattabellen) på rader
+som ikke matcher. Med `SELECT *` ser man dermed alle rader, matchende og
+ikke. `SELECT DISTINCT ?kode` hjelper heller ikke – alle de ubundne radene
+er like på `?kode` og kollapser til én ekstra "–"-rad, i stedet for å
+forsvinne. Riktig verktøy for "bare kodene som matcher" er `FILTER`
+(ekskluderer raden), ikke `BIND(IF(...))` (beholder raden, gir en betinget
+verdi) – de løser to forskjellige behov. Tommelfingerregel for
+beskrivelsen fremover: skriv "filtrer på …" når du vil ekskludere rader,
+reserver "bind … til" for når du faktisk vil beholde alle radene og legge
+på en utledet verdi (f.eks. et sant/usant-flagg).
+
 ## 4. 🟡 Bind semester til dato
 
 Vårsemester: åååå-01-01 til åååå-07-31. Høstsemester: åååå-08-01 til åååå-12-31
