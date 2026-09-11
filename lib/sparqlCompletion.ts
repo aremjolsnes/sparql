@@ -35,6 +35,15 @@ const EVIGHET = "9999-12-31";
  * verdier separat. Dette dekker IKKE tilfellet der koblingen mangler helt
  * (ingen bNode i det hele tatt) – det krever å pakke hele mønsteret inn i en
  * egen OPTIONAL rundt subjektet, som denne snippeten ikke gjør automatisk.
+ *
+ * Dataene har gyldig-fra/-til som xsd:dateTime, ikke xsd:date. En
+ * dateTime<=date-sammenligning feiler stille i SPARQL (typemismatch gir en
+ * feil i uttrykket, som FILTER tolker som usann) – derfor caster vi den
+ * rå verdien til xsd:date *inni* COALESCE (xsd:date(?raa)), slik at
+ * resultatet alltid er konsekvent xsd:date, samme type som nullpunkt-/
+ * evighetsverdiene og ${dato}. Bekreftet empirisk mot Fuseki Beta
+ * (2026-09-11, se Docs/ideer-ai-stotte.md) – uten cast ga
+ * dateTime<=date ingen verdi i det hele tatt (feil), ikke false.
  */
 function buildGyldighetSnippetTemplate(refVar: string, lk20: boolean): string {
   const epoch = lk20 ? LK20_EPOCH : LK06_EPOCH;
@@ -44,8 +53,8 @@ function buildGyldighetSnippetTemplate(refVar: string, lk20: boolean): string {
     "FILTER (regex(str(?gyldighetskobling), ?kode))",
     "OPTIONAL { ?bnode u:gyldig-fra ?gyldigFraRaa . }",
     "OPTIONAL { ?bnode u:gyldig-til ?gyldigTilRaa . }",
-    `BIND (COALESCE(?gyldigFraRaa, "${epoch}"^^xsd:date) AS ?gyldigFra)`,
-    `BIND (COALESCE(?gyldigTilRaa, "${EVIGHET}"^^xsd:date) AS ?gyldigTil)`,
+    `BIND (COALESCE(xsd:date(?gyldigFraRaa), "${epoch}"^^xsd:date) AS ?gyldigFra)`,
+    `BIND (COALESCE(xsd:date(?gyldigTilRaa), "${EVIGHET}"^^xsd:date) AS ?gyldigTil)`,
     'FILTER (?gyldigFra <= "${dato}"^^xsd:date && ?gyldigTil >= "${dato}"^^xsd:date)',
     `\${${refVar}} u:kode ?kode .\${}`,
   ].join("\n");

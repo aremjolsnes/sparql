@@ -154,6 +154,21 @@ Verifisert: logikk-test (`tsx`, midlertidig) bekrefter riktig
 kjørt direkte mot Fuseki Beta ga ekte gyldig-fra/-til-verdier (ingen
 syntaksfeil).
 
+**Bugfiks – dateTime vs. date (Are, 2026-09-11):** Are la merke til at ekte
+`gyldig-fra`/`gyldig-til`-verdier har formen `2022-08-01T00:00:00`
+(`xsd:dateTime`), mens datofilteret sammenlignet mot `^^xsd:date`. Bekreftet
+empirisk mot Fuseki Beta at dette **feiler stille**: `dateTime <= date` gir
+ingen verdi i det hele tatt (typefeil i uttrykket), ikke `false` – FILTER-et
+ekskluderer da raden uten synlig feilmelding. Dette gjaldt egentlig hele
+datofilter-delen av mønsteret helt siden første versjon, ikke bare den nye
+COALESCE-biten.
+
+Fiks: cast rådataene til `xsd:date` *inni* COALESCE
+(`COALESCE(xsd:date(?gyldigFraRaa), "…"^^xsd:date)`), bekreftet at
+`xsd:date(...)`-cast av en ubundet variabel også håndteres riktig av COALESCE
+(faller trygt gjennom til fallback-verdien). Retestet fullt generert eksempel
+direkte mot Fuseki Beta – datofilteret gir nå faktiske treff.
+
 ## 3. 🟡 Regex-hjelp
 
 Regex er vanskelig å skrive riktig i FILTER/REGEX-uttrykk. Form for hjelp uklar ennå.
