@@ -366,10 +366,9 @@ tilgjengelig). Ikke visuelt bekreftet.
   koder.
 - `order:` – `ORDER BY`-uttrykk fra en beskrivelse av ønsket sortering.
 
-## 4. 🟡 Bind semester til dato
+## 4. 🔵 Bind semester til dato
 
-Vårsemester: åååå-01-01 til åååå-07-31. Høstsemester: åååå-08-01 til åååå-12-31
-(rett datointervall må avklares – se merknad under).
+Vårsemester: åååå-01-01 til åååå-07-31. Høstsemester: åååå-08-01 til åååå-12-31.
 
 Typiske verdier: `http://psi.udir.no/kl06/semester_hoest_2007`,
 `http://psi.udir.no/kl06/semester_vaar_2021`.
@@ -378,9 +377,65 @@ Typiske verdier: `http://psi.udir.no/kl06/semester_hoest_2007`,
 til faktiske datoer, slik at man kan filtrere med `<=`, `=`, `>=` mot datoverdier
 i stedet for mot semester-URI-er direkte.
 
-## 5. 🟡 Filterhjelp for semester
+**Bekreftet mot ekte data (2026-09-11):** spurte Fuseki Beta for properties med
+"semester" i navnet – 6 stk, ikke bare `foerste-semester`: `u:foerste-semester`/
+`u:siste-semester` (domain `u:programomraade`, `u:utdanningsprogram`) og
+`u:naar-gis-det-undervisning-foerste-semester`/`-siste-semester` +
+`u:naar-kan-man-ta-eksamen-foerste-semester`/`-siste-semester` (begge domain
+`u:fagkode`). Alle 6 har `rdfs:range u:semester` riktig deklarert i OWL-fila
+(idé 7) – bekreftet ved grep i `Docs/ontologi-lowercase.ttl`.
 
-Egen filterhjelp knyttet til idé 4 – aktuelle FILTER-mønstre for semesterdatoer.
+Sjekket om selve semester-ressursen (f.eks. `d:semester_hoest_2020`) har egne
+datoer å hente i stedet for å gjette kalenderhalvår: den har kun `u:tittel`
+("Høst 2020"), `u:kortform` ("H20") og `u:rekkefoelge` (et løpenummer) – ingen
+datoer. Kalenderhalvår-antagelsen i overskriften er dermed fortsatt en bevisst
+forenkling, ikke noe bekreftet fra dataene – Are bekreftet at dette holder
+(samme presisjonsnivå som gyldighet-mønsteret i idé 2 bruker for filtrering).
+
+**Presisert av Are (2026-09-11) – spennet er start-til-slutt, ikke start-til-start:**
+det Are faktisk er ute etter er *varigheten* for et objekt: fra start av
+"første"-semesteret til **slutt** av "siste"-semesteret. Altså aug-01/jan-01
+for `foerste-semester`-siden, men des-31/jul-31 for `siste-semester`-siden
+(ikke aug-01/jan-01 for begge).
+
+**Slått sammen med idé 5** (samme vurdering som idé 2 gjorde: filterhjelpen
+bygges inn i selve snippeten, ikke som en egen separat greie).
+
+**Valgt løsning – ikke hardkodet liste, men autodetekterte par:** propertyene
+pares automatisk ved å finne `<prefiks>foerste-semester`/`<prefiks>siste-
+semester` blant properties med `range = u:semester` i OWL-kunnskapen (idé 7).
+Gir tre par i dag (det bare paret, undervisning-paret, eksamen-paret) uten at
+noen av de 6 navnene står hardkodet i koden – nye par med samme
+navnemønster plukkes opp automatisk hvis Udir legger dem til senere.
+
+**Bygget:** [lib/sparqlCompletion.ts](../lib/sparqlCompletion.ts) –
+`findSemesterPairs()` finner parene og domenet deres fra OWL-kunnskapen,
+`buildSemesterVarighetSnippetTemplate()` bygger selve snippeten. Vises som
+et eget forslag («semester-varighet», eller «semester-varighet (undervisning)»
+/«semester-varighet (eksamen)» når flere par matcher samme type) i
+`u:`-dropdownen i property-posisjon – domene-filtrert som idé 1 (i motsetning
+til gyldighet-mønsteret i idé 2, som bevisst vises uansett domene: her gir det
+derimot ikke mening å foreslå semester-varighet for en type som ikke har noen
+semester-property). Setter inn begge propertyene i paret (fortsetter fra `;`,
+ingen gjentagelse av subjektet – samme prinsipp som gyldighet-mønsteret), pluss
+BIND-linjer som trekker ut sesong (hoest/vaar) og årstall fra semester-URI-en
+med `STRAFTER`/`CONTAINS`, og et `FILTER` mot en `${dato}`-tab-stopp.
+
+**Verifisert:** typecheck + lint rent (samme 8 pre-eksisterende feil).
+Logikk-test (`tsx`, midlertidig, fjernet igjen) med en minimal `{state,
+dispatch}`-editor (samme teknikk som idé 2, men denne gangen med reell
+`state.update(spec)` i mock-dispatchen – et første forsøk med en for enkel
+mock ga et krasj og deretter dobbel/`undefined`-tekst i output, fikset ved å
+la `dispatch` lese `tx.state` direkte i stedet for å prøve å parse
+`tx.changes` selv) bekreftet: riktig par-gjenkjenning og domene-filtrering
+(0 forslag for en type uten semester-par), og at innsatt tekst er gyldig
+SPARQL-fortsettelse fra `;` (en første versjon gjentok subjektet unødvendig
+foran – ga en syntaktisk ugyldig `; ?s u:...`-sekvens, fjernet). Kjørte
+deretter det fullstendige genererte mønsteret direkte mot Fuseki Beta for
+begge domene-variantene: `semester_hoest_2007` → `2007-08-01`,
+`semester_vaar_2021` → `2021-07-31` (og tilsvarende for flere andre
+år/rader) – riktig utregnet i alle tilfeller, og FILTER mot en gitt dato
+returnerte kun rader der spennet faktisk dekker datoen.
 
 ## 6. 🟡 Prefiks i tabell, hel URI i CSV
 

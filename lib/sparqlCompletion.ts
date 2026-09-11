@@ -61,6 +61,66 @@ function buildGyldighetSnippetTemplate(refVar: string, lk20: boolean): string {
   ].join("\n");
 }
 
+/**
+ * Idé 4/5 (se Docs/ideer-ai-stotte.md): binder en semester-property-par
+ * (`<prefiks>foerste-semester`/`<prefiks>siste-semester`, f.eks. det bare
+ * paret for programområde/utdanningsprogram, eller "naar-gis-det-
+ * undervisning-"/"naar-kan-man-ta-eksamen-"-paret for fagkode) til et faktisk
+ * datospenn – ikke en hardkodet liste, men autodetektert fra OWL-kunnskapen
+ * (idé 7) ved å finne property-par med `rdfs:range u:semester` der lokalnavnet
+ * matcher mønsteret. Semester-ressursen selv (f.eks. d:semester_hoest_2020)
+ * har ingen egne datoer i dataene – kun tittel/kortform/rekkefølge (bekreftet
+ * empirisk mot Fuseki Beta 2026-09-11) – så kalenderhalvår er en bevisst
+ * forenkling (Are bekreftet dette holder): vår = jan–jul, høst = aug–des,
+ * samme presisjonsnivå som gyldighet-mønsteret (idé 2) bruker for filtrering.
+ *
+ * Spennet Are faktisk er ute etter (bekreftet 2026-09-11): start av
+ * "første"-semesteret til slutt av "siste"-semesteret – IKKE bare start til
+ * start. Derfor aug-01/jan-01 for fra-siden, men des-31/jul-31 for til-siden.
+ */
+type SemesterPair = {
+  foerste: string;
+  siste: string;
+  domain: string[];
+  suffix: string;
+  labelNb: string | null;
+};
+
+function findSemesterPairs(terms: OntologyTerm[]): SemesterPair[] {
+  const SEMESTER = U + "semester";
+  const semesterProps = terms.filter((t) => t.kind !== "class" && t.range.includes(SEMESTER));
+  const byLocalName = new Map(semesterProps.map((t) => [localName(t.uri), t]));
+  const pairs: SemesterPair[] = [];
+  for (const t of semesterProps) {
+    const ln = localName(t.uri);
+    if (!ln.endsWith("foerste-semester")) continue;
+    const prefix = ln.slice(0, -"foerste-semester".length); // "" eller f.eks. "naar-gis-det-undervisning-"
+    const sisteTerm = byLocalName.get(`${prefix}siste-semester`);
+    if (!sisteTerm) continue;
+    const suffix = prefix.replace(/-$/, "").split("-").filter(Boolean).pop() ?? "";
+    pairs.push({ foerste: ln, siste: `${prefix}siste-semester`, domain: t.domain, suffix, labelNb: t.labelNb });
+  }
+  return pairs;
+}
+
+function buildSemesterVarighetSnippetTemplate(pair: SemesterPair): string {
+  const rawFra = pair.suffix ? `${pair.suffix}SemFra` : "semFra";
+  const rawTil = pair.suffix ? `${pair.suffix}SemTil` : "semTil";
+  const dateFra = pair.suffix ? `${pair.suffix}SemesterFra` : "semesterFra";
+  const dateTil = pair.suffix ? `${pair.suffix}SemesterTil` : "semesterTil";
+  return [
+    // Ingen subjekt her med vilje – "u:" som ble skrevet var allerede i property-posisjon
+    // (fortsetter forrige ";"), samme mønster som gyldighet-mønsteret i idé 2.
+    `u:${pair.foerste} ?${rawFra} ;`,
+    `   u:${pair.siste} ?${rawTil} .`,
+    `BIND (xsd:date(CONCAT(STRAFTER(STRAFTER(str(?${rawFra}), "semester_"), "_"), ` +
+      `IF(CONTAINS(str(?${rawFra}), "hoest"), "-08-01", "-01-01"))) AS ?${dateFra})`,
+    `BIND (xsd:date(CONCAT(STRAFTER(STRAFTER(str(?${rawTil}), "semester_"), "_"), ` +
+      `IF(CONTAINS(str(?${rawTil}), "hoest"), "-12-31", "-07-31"))) AS ?${dateTil})`,
+    `FILTER (?${dateFra} <= "\${dato}"^^xsd:date && ?${dateTil} >= "\${dato}"^^xsd:date)\${}`,
+  ].join("\n");
+}
+
 /** Sist bundne "?variabel" som objekt for en u:-property i blokka (f.eks. "?of" i "u:etter-fag ?of"). */
 function lastObjectVariable(block: string): string | null {
   const matches = [...block.matchAll(/u:[\w-]+\s+(\?\w+)/g)];
@@ -105,13 +165,18 @@ export function sparqlCompletionSource(getTerms: () => OntologyTerm[]) {
     const typePosition = isTypePosition(before);
 
     let candidates = terms.filter((t) => (typePosition ? t.kind === "class" : t.kind !== "class"));
+    let semesterPairs: SemesterPair[] = [];
+    let block = "";
 
     if (!typePosition) {
-      const block = currentBlock(context.state.sliceDoc(0, context.pos));
+      block = currentBlock(context.state.sliceDoc(0, context.pos));
       const knownTypes = declaredTypeUris(block);
       if (knownTypes.length > 0) {
         candidates = candidates.filter(
           (t) => t.domain.length === 0 || t.domain.some((d) => knownTypes.includes(d)),
+        );
+        semesterPairs = findSemesterPairs(terms).filter((p) =>
+          p.domain.some((d) => knownTypes.includes(d)),
         );
       }
     }
@@ -136,6 +201,22 @@ export function sparqlCompletionSource(getTerms: () => OntologyTerm[]) {
           const refVar = lastObjectVariable(block) ?? "?ref";
           const lk20 = declaredTypeUris(block).some((uri) => uri.endsWith("_lk20"));
           snippet(buildGyldighetSnippetTemplate(refVar, lk20))(view, completion, match.from, to);
+        },
+      });
+    }
+
+    for (const pair of semesterPairs) {
+      options.push({
+        label: pair.suffix ? `semester-varighet (${pair.suffix})` : "semester-varighet",
+        type: "keyword",
+        detail: "sett inn semester→dato-spenn",
+        info:
+          `Basert på u:${pair.foerste}/u:${pair.siste}` +
+          (pair.labelNb ? ` (${pair.labelNb})` : "") +
+          '. Vår = jan–jul, høst = aug–des (kalenderhalvår, semester-ressursen selv har ingen egne datoer). Spennet går fra start av "første"-semesteret til slutt av "siste"-semesteret.',
+        boost: 2,
+        apply: (view, completion, _from, to) => {
+          snippet(buildSemesterVarighetSnippetTemplate(pair))(view, completion, match.from, to);
         },
       });
     }
