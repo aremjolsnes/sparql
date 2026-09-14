@@ -2,7 +2,7 @@ import { snippet } from "@codemirror/autocomplete";
 import type { Completion, CompletionContext, CompletionResult } from "@codemirror/autocomplete";
 import { FIXED_PREFIXES } from "@/lib/prefixes";
 import type { OntologyTerm } from "@/lib/ontologyTerms";
-import { requestAiSnippet, type AiAssistTopic } from "@/lib/aiAssist";
+import { requestAiSnippet } from "@/lib/aiAssist";
 
 const U = FIXED_PREFIXES.u;
 const localName = (uri: string) => (uri.startsWith(U) ? uri.slice(U.length) : uri);
@@ -227,10 +227,12 @@ export function sparqlCompletionSource(getTerms: () => OntologyTerm[]) {
   };
 }
 
-const AI_ASSIST_LABEL: Record<AiAssistTopic, string> = {
+const AI_ASSIST_LABEL: Record<"regex" | "filter", string> = {
   regex: "AI: generer regex fra beskrivelsen",
   filter: "AI: generer FILTER fra beskrivelsen",
 };
+
+const DESCRIBE_LABEL = "AI: beskriv spørringen";
 
 /**
  * Idé 3 (se Docs/ideer-ai-stotte.md): `#+ regex: <beskrivelse>` eller
@@ -240,17 +242,50 @@ const AI_ASSIST_LABEL: Record<AiAssistTopic, string> = {
  * fremkalles. Kun manuell fremkalling (`context.explicit`, dvs. Ctrl+Space) –
  * aldri automatisk mens brukeren fortsatt skriver beskrivelsen. Ukjent/
  * manglende tema gir bevisst ingen completion (se diskusjon i idé 3).
+ *
+ * Idé 10: `#+?` alene på linja går motsatt vei – hele spørringen sendes til
+ * samme API-rute (`describe`-tema) og svaret (en fritekst-beskrivelse,
+ * ferdig formatert som `#`-linjer av API-et) erstatter `#+?`-linja. Ingen
+ * `description` å parse ut her (i motsetning til regex/filter over), derfor
+ * egen gren med eget regex-mønster.
  */
 export function aiAssistCompletionSource() {
   return async (context: CompletionContext): Promise<CompletionResult | null> => {
     if (!context.explicit) return null;
+
+    const describeMatch = context.matchBefore(/#\+\?\s*$/);
+    if (describeMatch) {
+      // Hele spørringen, ikke bare teksten foran `#+?` – i motsetning til regex/filter-grenen
+      // under står denne triggerlinja typisk øverst, så "det som kommer før" er ikke nyttig kontekst.
+      const fullQuery = context.state.doc.toString();
+
+      let option: Completion;
+      try {
+        const description = await requestAiSnippet("describe", "", fullQuery);
+        option = {
+          label: `${DESCRIBE_LABEL}: ${description.replace(/\s+/g, " ").slice(0, 60)}`,
+          type: "keyword",
+          apply: (view, _completion, from, to) => {
+            view.dispatch({ changes: { from, to, insert: description } });
+          },
+        };
+      } catch (e) {
+        option = {
+          label: `AI-kall feilet: ${(e as Error).message}`,
+          type: "keyword",
+          apply: () => {},
+        };
+      }
+
+      return { from: describeMatch.from, to: describeMatch.to, options: [option], filter: false };
+    }
 
     const match = context.matchBefore(/#\+\s*(regex|filter)\s*:\s*.+/i);
     if (!match) return null;
 
     const parsed = /^#\+\s*(regex|filter)\s*:\s*(.+)$/i.exec(match.text);
     if (!parsed) return null;
-    const topic = parsed[1].toLowerCase() as AiAssistTopic;
+    const topic = parsed[1].toLowerCase() as "regex" | "filter";
     const description = parsed[2].trim();
     if (!description) return null;
 

@@ -3,8 +3,9 @@ import { FIXED_PREFIXES } from "@/lib/prefixes";
 
 export const runtime = "nodejs";
 
-const TOPICS = ["regex", "filter"] as const;
+const TOPICS = ["regex", "filter", "describe"] as const;
 type Topic = (typeof TOPICS)[number];
+type GenTopic = "regex" | "filter";
 
 // Haiku er billig/rask nok for å oversette en kort beskrivelse til et SPARQL-fragment.
 const MODEL = "claude-haiku-4-5-20251001";
@@ -15,7 +16,7 @@ const PREFIX_LINES = Object.entries(FIXED_PREFIXES)
   .map(([p, uri]) => `PREFIX ${p}: <${uri}>`)
   .join("\n");
 
-const TOPIC_INSTRUCTIONS: Record<Topic, string> = {
+const TOPIC_INSTRUCTIONS: Record<GenTopic, string> = {
   regex:
     'Som standard: svar med KUN et regex(...)-uttrykk (SPARQL-funksjonen), f.eks. regex(str(?kode), "^NOR") ' +
     "– ikke pakk det inn i FILTER(...) eller BIND(...) selv. MEN: hvis beskrivelsen eksplisitt ber om noe " +
@@ -54,25 +55,42 @@ export async function POST(req: NextRequest) {
   }
 
   const description = (body.description ?? "").trim().slice(0, MAX_DESCRIPTION_LEN);
-  if (!description) {
+  if (topic !== "describe" && !description) {
     return NextResponse.json({ error: "Mangler beskrivelse." }, { status: 400 });
   }
-  // Behold slutten av teksten (nærmest #+-linja) hvis den er for lang – det er der
-  // variablene som faktisk er relevante for beskrivelsen typisk står.
+  // Behold slutten av teksten hvis den er for lang. For regex/filter er dette
+  // nærmest #+-linja (der de relevante variablene typisk står); for describe er
+  // #+?-linja øverst i spørringen, så det som gjenstår er uansett resten av den.
   const rawContext = (body.context ?? "").trim();
   const context = rawContext.slice(Math.max(0, rawContext.length - MAX_CONTEXT_LEN));
 
-  const userPrompt = [
-    TOPIC_INSTRUCTIONS[topic],
-    "",
-    context
-      ? `Trippel-blokk skrevet så langt (for gjenbruk av variabelnavn):\n${context}`
-      : "(ingen forutgående trippel-blokk å vise til)",
-    "",
-    `Beskrivelse fra bruker: ${description}`,
-  ].join("\n");
+  const userPrompt =
+    topic === "describe"
+      ? `Spørringen:\n${context || "(tom spørring)"}`
+      : [
+          TOPIC_INSTRUCTIONS[topic],
+          "",
+          context
+            ? `Trippel-blokk skrevet så langt (for gjenbruk av variabelnavn):\n${context}`
+            : "(ingen forutgående trippel-blokk å vise til)",
+          "",
+          `Beskrivelse fra bruker: ${description}`,
+        ].join("\n");
 
-  const SYSTEM_PROMPT = `Du hjelper med å skrive SPARQL mot Grep, Utdanningsdirektoratets kodeverk-API.
+  const DESCRIBE_SYSTEM_PROMPT = `Du hjelper med å lese SPARQL-spørringer mot Grep, Utdanningsdirektoratets kodeverk-API.
+Faste prefikser tilgjengelig i spørringen:
+${PREFIX_LINES}
+
+Brukeren har limt inn en SPARQL-spørring (eventuelt et ufullstendig utkast) og vil ha en kort
+forklaring av hva den gjør, på norsk. Svar KUN med selve forklaringen, formatert som én eller
+flere kommentarlinjer som hver starter med "# " – ingen Markdown-kodeblokker, ingen \`-tegn, ingen
+innledning eller avslutning utenom selve kommentarlinjene (teksten settes rett inn i editoren som
+erstatning for en kommentarlinje, så alt du skriver må være gyldig som SPARQL-kommentar). Hold det
+kort og presist (1–3 setninger, brutt over flere "# "-linjer om nødvendig for lesbarhet) – fokuser
+på HVA spørringen henter og eventuelle sentrale filtre/betingelser, ikke en linje-for-linje-
+gjennomgang av syntaksen.`;
+
+  const SPARQL_GEN_SYSTEM_PROMPT = `Du hjelper med å skrive SPARQL mot Grep, Utdanningsdirektoratets kodeverk-API.
 Faste prefikser tilgjengelig i spørringen:
 ${PREFIX_LINES}
 
@@ -89,6 +107,8 @@ en evalueringsfeil som lar ?resultat forbli ubundet for den raden uten at hele s
 Eksempel: BIND(IF(regex(str(?k), "^NOR"), ?k, ?ub) AS ?kode) – ikke BIND(IF(..., ?k, UNDEF) AS
 ?kode). Hvis brukerens beskrivelse egentlig handler om å ekskludere rader (ikke om en betinget
 binding), er et vanlig FILTER ofte enklere og riktigere enn IF/BIND-trikset over.`;
+
+  const SYSTEM_PROMPT = topic === "describe" ? DESCRIBE_SYSTEM_PROMPT : SPARQL_GEN_SYSTEM_PROMPT;
 
   let upstream: Response;
   try {
@@ -122,9 +142,19 @@ binding), er et vanlig FILTER ofte enklere og riktigere enn IF/BIND-trikset over
   }
 
   const data = await upstream.json();
-  const snippet = (data?.content?.[0]?.text ?? "").trim();
+  let snippet: string = (data?.content?.[0]?.text ?? "").trim();
   if (!snippet) {
     return NextResponse.json({ error: "AI-svaret var tomt." }, { status: 502 });
+  }
+
+  // Innsatt tekst erstatter en kommentarlinje – en linje uten ledende "#" ville
+  // ikke lenger vært en kommentar og kunne knekke spørringen. Håndhevet her i
+  // stedet for kun i promptet, siden modellen av og til glipper på formatet.
+  if (topic === "describe") {
+    snippet = snippet
+      .split("\n")
+      .map((line) => (line.trim().startsWith("#") ? line : `# ${line}`))
+      .join("\n");
   }
 
   return NextResponse.json({ snippet });

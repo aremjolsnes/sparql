@@ -48,7 +48,7 @@ export default function HjelpPage() {
       </div>
 
       <p className="text-sm text-muted">
-        Editoren har tre former for skrivehjelp, alle fremkalt med <b>Ctrl+Space</b> (eller
+        Editoren har fire former for skrivehjelp, alle fremkalt med <b>Ctrl+Space</b> (eller
         automatisk dropdown mens du skriver, for de to første). Bakgrunn og utviklingshistorikk
         står i{" "}
         <a
@@ -152,6 +152,24 @@ export default function HjelpPage() {
           «filtrer på …» når du vil ekskludere rader; reserver «bind … til» for når du faktisk
           vil beholde alle radene og legge på en utledet verdi.
         </div>
+      </Section>
+
+      <Section title="4. #+? (AI-beskrivelse av spørringen)">
+        <p>
+          Motsatt retning av #3: sett inn en linje med bare{" "}
+          <code className="font-mono">#+?</code> (f.eks. øverst i spørringen), cursor på linja,
+          trykk <b>Ctrl+Space</b> og <b>Enter</b>. Linja erstattes med en kort forklaring av hva
+          spørringen gjør, satt inn som en eller flere <code className="font-mono">#</code>
+          -kommentarlinjer.
+        </p>
+        <Example
+          before={
+            "#+?\n?s a u:fagkode ;\n   u:kode ?kode .\nFILTER (regex(str(?kode), \"^(NOR|ENG)\"))"
+          }
+          after={
+            "# Henter fagkoder som starter på NOR eller ENG.\n?s a u:fagkode ;\n   u:kode ?kode .\nFILTER (regex(str(?kode), \"^(NOR|ENG)\"))"
+          }
+        />
       </Section>
     </div>
   );

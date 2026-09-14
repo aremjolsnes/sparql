@@ -525,6 +525,62 @@ lenke, valgte «subjekt»: ny fane dukket opp rett til høyre, navngitt riktig,
 med 31 resultatrader ferdig hentet – bekreftet i både konsoll-output og
 skjermbilde.
 
+## 10. 🔵 Beskriv spørringen (AI-oppsummering)
+
+Idé fra Are (2026-09-14): sett inn en linje øverst i skrivefeltet med `#+?` og
+fremkall den – AI-kall med spørsmålet «Hva handler denne spørringen om»/«Beskriv
+hva denne spørringen gjør», og den kommenterte linja erstattes med en kommentar
+som inneholder svaret.
+
+Motsatt retning av idé 3: der idé 3 går fra fritekst-beskrivelse til et
+SPARQL-fragment, går denne fra eksisterende SPARQL til en fritekst-beskrivelse
+(satt inn igjen som kommentar).
+
+**Avklart under bygging (2026-09-14):**
+- Trigger-mønsteret er `#+?` alene på linja (uten kolon/beskrivelse etter) –
+  matches med et eget regex i `aiAssistCompletionSource`, egen gren før
+  regex/filter-grenen (skiller seg fra idé 3s `#+ tema: beskrivelse`, som
+  krever en beskrivelse etter kolon).
+- Konteksten som sendes er hele dokumentteksten
+  (`context.state.doc.toString()`), ikke `precedingQuery` (idé 3s mønster) –
+  `#+?`-linja står typisk øverst, så «det som kommer før» ville vært tomt.
+- Svaret formateres av selve API-et som én eller flere `#`-linjer (bedt om i
+  systemprompten, og håndhevet i etterkant i API-ruta – enhver linje uten
+  ledende `#` prefikses automatisk, siden en linje uten kommentartegn ville
+  knekt spørringen ved innsetting).
+
+**Bygget:**
+- [app/api/ai-assist/route.ts](../app/api/ai-assist/route.ts) – nytt tema
+  `describe` i `TOPICS`. Egen systemprompt (`DESCRIBE_SYSTEM_PROMPT`) i stedet
+  for idé 3s fritekst-til-SPARQL-prompt, siden retningen er motsatt. Ingen
+  `description`-krav for dette temaet (i motsetning til regex/filter, som
+  fortsatt krever det) – selve spørringsteksten sendes som `context`.
+- [lib/aiAssist.ts](../lib/aiAssist.ts) – `AiAssistTopic` utvidet med
+  `"describe"`.
+- [lib/sparqlCompletion.ts](../lib/sparqlCompletion.ts) –
+  `aiAssistCompletionSource()` sjekker først `#\+\?\s*$` (describe), deretter
+  det eksisterende regex/filter-mønsteret. `apply` erstatter hele
+  `#+?`-linja med den ferdig formaterte beskrivelsen.
+
+**Verifisert:** typecheck + lint rent (samme pre-eksisterende feil som før i
+`SparqlEditor.tsx`/`admin`/`login`/`profil`/`test`/`SavedQueriesMenu`, ingen
+nye). To midlertidige `tsx`-tester (fjernet igjen etter kjøring):
+1. Direkte kall til `POST` i `app/api/ai-assist/route.ts` med ekte
+   `ANTHROPIC_API_KEY` – en normal spørring ga en korrekt, kort beskrivelse
+   formatert som to `#`-linjer; en tom spørring ga en fornuftig
+   feil-/tomhets-beskrivelse (ingen krasj).
+2. `aiAssistCompletionSource()` med ekte `CompletionContext`/`EditorState`
+   (mocket kun `fetch` mot ruta over, ekte matching/apply-logikk) – bekreftet:
+   `#+?` (med og uten trailing whitespace) trigger describe-grenen med riktig
+   `from`/`to` og setter inn beskrivelsen som `#`-linjer; ikke-explicit
+   fremkalling gir fortsatt `null` (intet AI-kall mens brukeren skriver);
+   `#+` uten `?` eller tema trigger verken describe- eller
+   regex/filter-grenen; regex/filter-grenen er uendret (regresjonstestet).
+
+Ikke visuelt bekreftet i en faktisk nettleser – krever innlogget Supabase-økt
+(samme auth-flyt som resten av appen), som ikke var tilgjengelig i dette
+miljøet uten Ares egne brukeropplysninger.
+
 ---
 
 ## Diskusjon
