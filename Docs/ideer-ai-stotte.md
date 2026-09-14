@@ -489,6 +489,42 @@ funksjonen (ny fane, aktiver den) uendret. Spec oppdatert (§ Innlogging).
 kodefjerning uten ny logikk å teste isolert – ikke visuelt bekreftet i en
 faktisk nettleser (samme miljøbegrensning som resten av loggen).
 
+## 9. 🔵 Høyreklikk på ressurslenke → s/p/o i ny fane
+
+I GraphDB kan man klikke på en ressurs i et resultat og få en ny spørring der
+ressursen er subjekt (`?s ?p ?o` med ressursen bundet til `?s`). Ønske: samme
+funksjonalitet her – siden venstreklikk på en ressurslenke allerede åpner selve
+URI-en i en ny nettleserfane, brukes høyreklikk i stedet til å velge om
+ressursen skal være subjekt, predikat eller objekt, i en ny fane rett til
+høyre for gjeldende fane, ferdig kjørt.
+
+**Bygget:**
+- `buildResourceQuery(uri, role)` i [lib/sparql.ts](../lib/sparql.ts) – bygger
+  `SELECT * WHERE { <uri> ?p ?o }` (eller tilsvarende med URI-en i predikat-
+  /objektposisjon), alltid med full IRI i vinkelparenteser – trenger ingen
+  PREFIX-oppslag.
+- [components/ResultsTable.tsx](../components/ResultsTable.tsx) – høyreklikk
+  (`onContextMenu`, `preventDefault`) på en ressurslenke åpner en liten
+  posisjonert meny (samme håndrullede mønster som `SavedQueriesMenu`, lukkes
+  ved klikk utenfor/Escape) med de tre valgene. Venstreklikk er uendret (åpner
+  fortsatt URI-en direkte i ny nettleserfane, som før).
+- [app/page.tsx](../app/page.tsx) – `openResourceQueryInNewTab(uri, role)`:
+  oppretter en ny fane satt inn rett etter aktiv fane (ikke bakerst, som
+  `addTab`/`openSavedInNewTab`), navngir den med selve mønsteret (f.eks.
+  `d:AAORS01 ?p ?o`), aktiverer den og kjører spørringen med det samme.
+  `execute()` tar nå en valgfri fane-parameter (default: aktiv fane) for å
+  kunne kjøre en fane som ennå ikke er aktiv uten å vente på at React-state
+  rekker å oppdateres.
+
+**Verifisert:** typecheck + lint rent. Ekte nettleser-test lyktes denne gangen
+(i motsetning til resten av loggen) – nedlastet Playwright-Chromium ble
+nektet kjøreløyve av sandboksen som før («spawn UNKNOWN»/«Permission
+denied»), men å peke Playwright mot den allerede installerte system-Chrome
+(`chrome.exe`, headless) fungerte. Kjørte standardspørringen, høyreklikket en
+lenke, valgte «subjekt»: ny fane dukket opp rett til høyre, navngitt riktig,
+med 31 resultatrader ferdig hentet – bekreftet i både konsoll-output og
+skjermbilde.
+
 ---
 
 ## Diskusjon

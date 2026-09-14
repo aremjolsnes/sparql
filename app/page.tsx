@@ -7,8 +7,15 @@ import Pagination from "@/components/Pagination";
 import Tabs from "@/components/Tabs";
 import EndpointBar from "@/components/EndpointBar";
 import { BUILTIN_ENDPOINTS, DEFAULT_ENDPOINT_NAME, PAGE_SIZE, Endpoint } from "@/lib/endpoints";
-import { ensurePrefixes } from "@/lib/prefixes";
-import { SparqlResults, SparqlTerm, resultVars, toCsv } from "@/lib/sparql";
+import { ensurePrefixes, shortenUri } from "@/lib/prefixes";
+import {
+  SparqlResults,
+  SparqlTerm,
+  TermRole,
+  buildResourceQuery,
+  resultVars,
+  toCsv,
+} from "@/lib/sparql";
 import { useAuth } from "@/components/AuthProvider";
 import AuthBar from "@/components/AuthBar";
 import SavedQueriesMenu from "@/components/SavedQueriesMenu";
@@ -230,8 +237,34 @@ export default function Page() {
     setActiveId(t.id);
   }
 
-  async function execute() {
-    const tab = activeTab;
+  // Idé 9 (se Docs/ideer-ai-stotte.md): høyreklikk på en ressurslenke i
+  // resultattabellen → åpne en `?s ?p ?o`-spørring med ressursen satt inn som
+  // subjekt/predikat/objekt, i en ny fane rett til høyre for gjeldende fane,
+  // og kjør den med det samme.
+  function resourceTabName(uri: string, role: TermRole): string {
+    const short = shortenUri(uri);
+    if (role === "subject") return `${short} ?p ?o`;
+    if (role === "predicate") return `?s ${short} ?o`;
+    return `?s ?p ${short}`;
+  }
+
+  function openResourceQueryInNewTab(uri: string, role: TermRole) {
+    const t: Tab = {
+      id: newId(),
+      name: resourceTabName(uri, role),
+      query: buildResourceQuery(uri, role),
+    };
+    setTabs((ts) => {
+      const at = ts.findIndex((tb) => tb.id === activeTab.id);
+      const insertAt = at === -1 ? ts.length : at + 1;
+      return [...ts.slice(0, insertAt), t, ...ts.slice(insertAt)];
+    });
+    setActiveId(t.id);
+    execute(t);
+  }
+
+  async function execute(tabOverride?: Tab) {
+    const tab = tabOverride ?? activeTab;
     const { query: prepared, added, adjusted } = ensurePrefixes(
       tab.query,
       selectedEndpoint.prefixes,
@@ -471,7 +504,7 @@ export default function Page() {
                 key={activeTab.id}
                 value={activeTab.query}
                 onChange={(v) => setTabQuery(activeTab.id, v)}
-                onRun={execute}
+                onRun={() => execute()}
               />
             </div>
             <div className="flex items-center justify-between gap-3 px-3 py-2 border border-t-0 border-border rounded-b bg-panel">
@@ -487,7 +520,7 @@ export default function Page() {
                 </span>
               </div>
               <button
-                onClick={execute}
+                onClick={() => execute()}
                 disabled={run?.status === "running"}
                 className="bg-accent text-black rounded px-4 py-1.5 text-sm font-semibold hover:brightness-110 disabled:opacity-60 shrink-0"
               >
@@ -572,7 +605,12 @@ export default function Page() {
                 <p className="text-muted text-sm">Ingen treff.</p>
               )}
               {run?.status === "done" && run.kind === "table" && total > 0 && (
-                <ResultsTable vars={run.vars} rows={pageRows} startNumber={from} />
+                <ResultsTable
+                  vars={run.vars}
+                  rows={pageRows}
+                  startNumber={from}
+                  onOpenInNewTab={openResourceQueryInNewTab}
+                />
               )}
             </div>
           </section>

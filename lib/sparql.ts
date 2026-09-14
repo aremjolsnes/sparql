@@ -57,6 +57,22 @@ export function termText(term: SparqlTerm | undefined): string {
   return term?.value ?? "";
 }
 
+/** Hvilken posisjon en ressurs settes inn i når man bygger en `?s ?p ?o`-spørring fra et treff. */
+export type TermRole = "subject" | "predicate" | "object";
+
+/**
+ * Idé 9 (se Docs/ideer-ai-stotte.md): høyreklikk på en ressurslenke i
+ * resultattabellen og bruk den som subjekt/predikat/objekt i en ny spørring.
+ * Bruker alltid full IRI i vinkelparenteser – trenger ingen PREFIX-deklarasjon.
+ */
+export function buildResourceQuery(uri: string, role: TermRole): string {
+  const iri = `<${uri}>`;
+  const s = role === "subject" ? iri : "?s";
+  const p = role === "predicate" ? iri : "?p";
+  const o = role === "object" ? iri : "?o";
+  return `SELECT * WHERE {\n  ${s} ${p} ${o}\n}\nLIMIT 100`;
+}
+
 const FORMULA_PREFIX = /^[=+\-@\t\r]/;
 
 /** CSV-escaping med vern mot formel-injeksjon i regneark. */
