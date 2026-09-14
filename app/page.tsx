@@ -165,7 +165,15 @@ export default function Page() {
               ? remote.activeId
               : remote.tabs[0].id,
           );
-        } else {
+        } else if (!remote) {
+          // Kun her (ingen rad ennå) trenger vi å skyve fra mount – IKKE også når lokalt
+          // bare er nyere-eller-likt (som før), ellers kan denne pushen (med hva som helst
+          // av tabs som var lastet akkurat da) havne i kappløp med den debouncede
+          // skylagringen under: fullfører denne (treg, potensielt eldre innhold) ETTER at
+          // debounce-en allerede har lagret en ferskere fane (f.eks. en nettopp åpnet lagret
+          // spørring), vinner den likevel på server – siden `updated_at` er
+          // fullførings-tidspunkt, ikke rekkefølgen endringene faktisk skjedde i – og en
+          // senere refresh/navigering ser da denne som "nyest" og forkaster den ferske fanen.
           await saveRemoteTabs(tabs, activeId);
         }
       } catch {
