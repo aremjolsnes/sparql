@@ -12,5 +12,23 @@ export default function FusekiTestLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="fuseki-test">{children}</div>;
+  return (
+    <>
+      <header className="border-b border-border">
+        <div className="flex items-center justify-end gap-3 px-5 pt-2 pb-1 text-sm">
+          <a
+            href="/"
+            className="border border-border rounded px-3 py-1 text-sm hover:bg-panel-2"
+          >
+            ← Til Workbench
+          </a>
+        </div>
+        <div className="px-5 pb-3">
+          <h1 className="text-lg font-semibold">SPARQL-workbench for Grep</h1>
+          <p className="text-sm text-muted">Benchmark-test</p>
+        </div>
+      </header>
+      <div className="fuseki-test">{children}</div>
+    </>
+  );
 }

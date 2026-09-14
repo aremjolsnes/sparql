@@ -453,8 +453,6 @@ export default function Page() {
           </a>
           <a
             href="/test"
-            target="_blank"
-            rel="noopener noreferrer"
             title="Fuseki-test: sammenlign GraphDB mot Jena Fuseki"
             className="w-6 h-6 flex items-center justify-center rounded-full border border-border text-xs text-muted hover:bg-panel-2 hover:text-foreground"
           >

@@ -198,7 +198,6 @@ export default function Page() {
 
   return (
     <main>
-      <h1>Fuseki-test</h1>
       <p className="sub">
         Kjør SPARQL mot dagens GraphDB og test-Fuseki, og sammenlign
         responstid, ytelse og responsinnhold. <Link href="/test/report">Rapporter →</Link>
