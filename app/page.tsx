@@ -440,30 +440,8 @@ export default function Page() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Topplinje */}
-      <header className="flex items-center justify-between gap-4 px-5 py-3 border-b border-border flex-wrap">
-        <h1 className="text-lg font-semibold">SPARQL-workbench for Grep</h1>
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex rounded border border-border overflow-hidden text-sm">
-            {(["editor", "both", "results"] as ViewMode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => setViewMode(m)}
-                className={
-                  "px-3 py-1 " +
-                  (viewMode === m ? "bg-accent text-black" : "hover:bg-panel-2")
-                }
-              >
-                {VIEW_LABELS[m]}
-              </button>
-            ))}
-          </div>
-          <EndpointBar
-            builtin={BUILTIN_ENDPOINTS}
-            custom={custom}
-            selectedName={selectedEndpoint.name}
-            onSelect={setEndpointName}
-            onSaveCustom={setCustom}
-          />
+      <header className="border-b border-border">
+        <div className="flex items-center justify-end gap-3 px-5 pt-2 pb-1 text-sm">
           <a
             href="/hjelp"
             target="_blank"
@@ -473,7 +451,42 @@ export default function Page() {
           >
             ?
           </a>
+          <a
+            href="/test"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Fuseki-test: sammenlign GraphDB mot Jena Fuseki"
+            className="w-6 h-6 flex items-center justify-center rounded-full border border-border text-xs text-muted hover:bg-panel-2 hover:text-foreground"
+          >
+            ⇄
+          </a>
           <AuthBar />
+        </div>
+        <div className="flex items-center justify-between gap-4 px-5 pb-3 flex-wrap">
+          <h1 className="text-lg font-semibold">SPARQL-workbench for Grep</h1>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex rounded border border-border overflow-hidden text-sm">
+              {(["editor", "both", "results"] as ViewMode[]).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setViewMode(m)}
+                  className={
+                    "px-3 py-1 " +
+                    (viewMode === m ? "bg-accent text-black" : "hover:bg-panel-2")
+                  }
+                >
+                  {VIEW_LABELS[m]}
+                </button>
+              ))}
+            </div>
+            <EndpointBar
+              builtin={BUILTIN_ENDPOINTS}
+              custom={custom}
+              selectedName={selectedEndpoint.name}
+              onSelect={setEndpointName}
+              onSaveCustom={setCustom}
+            />
+          </div>
         </div>
       </header>
 
