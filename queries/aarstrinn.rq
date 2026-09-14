@@ -1,0 +1,4 @@
+PREFIX u: <http://psi.udir.no/ontologi/kl06/>
+select * where {
+  ?s a u:aarstrinn .
+}

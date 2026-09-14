@@ -1,0 +1,152 @@
+PREFIX u:   <http://psi.udir.no/ontologi/kl06/>
+PREFIX st:  <https://data.udir.no/kl06/v201906/status/status_>
+PREFIX d:   <http://psi.udir.no/kl06/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+#
+# Omskrevet for deterministisk oppfoersel paa tvers av GraphDB og Jena Fuseki.
+# Endringer mot originalen (q01.rq):
+#
+#  1. Talluttrekk fra semestertittel er vernet med COALESCE. En parse-/cast-
+#     feil kan dermed aldri naa FILTER og droppe en rad. Dette var grunnen til
+#     at hele IOP-grenen forsvant i Fuseki (Jena kaster feil der GraphDB er mild).
+#
+#  2. Semestervindu-filteret ligger naa paa toppnivaa og er felles for begge
+#     grener. MERK: i originalen laa det inne i en OPTIONAL i Gren 1 og
+#     filtrerte i praksis ingenting der. Naa filtrerer det paa ekte i begge
+#     grener, saa denne spoerringen returnerer LEGITIMT faerre Gren 1-rader enn
+#     originalen (f.eks. fag som foerst undervises etter filter-semesteret,
+#     som SSR2004 med "Hoest 2026").
+#
+#  3. Grupperes naa paa fagkode-nivaa (?fag ?fagkode ?fagkodeTittel
+#     ?udirNoLenke). ?uFSem/?uSSem/?xFSem/?xSSem hentes ut med MIN() i stedet
+#     for aa staa i GROUP BY, saa en ekstra/tom ?uFSem-binding ikke lenger
+#     splitter gruppen. Dette var grunnen til "fantomradene" for DRF2003/SSR2004.
+#
+#  4. GROUP_CONCAT-input sorteres i en indre delspoerring (ORDER BY), saa
+#     rekkefoelgen i de sammensatte strengene blir stabil og lik i begge
+#     motorer. (Indre ORDER BY inn i GROUP_CONCAT er stoettet av baade GraphDB
+#     og Jena, men er strengt tatt implementasjonsdefinert i SPARQL 1.1.)
+#     Konsekvens: verdiene i progOmr/laereplan/forAarstrinn/benyttesSammenMed
+#     kommer naa sortert, ikke i vilkaarlig rekkefoelge.
+#
+# Maal for testen: kjoer DENNE spoerringen mot begge endepunkter og verifiser
+# at resultatet er identisk (utover ev. CSV-siteringstil).
+#
+
+# COALESCE rundt GROUP_CONCAT/MIN: GraphDB gir "" for tom gruppe, Jena gir
+# ubundet. COALESCE(..., "") gir "" i begge, saa JSON-svaret blir likt.
+SELECT
+  (COALESCE(GROUP_CONCAT(DISTINCT ?poKode;       separator=", "), "") AS ?progOmr)
+  (COALESCE(GROUP_CONCAT(DISTINCT ?lpKortform;   separator=", "), "") AS ?laereplan)
+  ?fag ?fagkode ?fagkodeTittel ?udirNoLenke
+  (COALESCE(GROUP_CONCAT(DISTINCT ?forAa;        separator=", "), "") AS ?forAarstrinn)
+  (COALESCE(MIN(?uFSemRaw), "") AS ?uFSem)
+  (COALESCE(MIN(?uSSemRaw), "") AS ?uSSem)
+  (COALESCE(MIN(?xFSemRaw), "") AS ?xFSem)
+  (COALESCE(MIN(?xSSemRaw), "") AS ?xSSem)
+  (COALESCE(GROUP_CONCAT(DISTINCT ?benSammenMed; separator=", "), "") AS ?benyttesSammenMed)
+WHERE {
+  {
+    SELECT
+      ?fag ?fagkode ?fagkodeTittel ?udirNoLenke
+      ?poKode ?lpKortform ?forAa
+      ?uFSemRaw ?uSSemRaw ?xFSemRaw ?xSSemRaw ?benSammenMed
+    WHERE {
+
+      # ---- filter-semester (endre her) ----
+      VALUES (?filterSesong ?filterAar) { ("vaar" 2026) }
+      BIND(IF(LCASE(STR(?filterSesong)) IN ("vaar", "vår"), 1, 2) AS ?filIdx)
+      BIND((xsd:integer(?filterAar) * 2) + ?filIdx AS ?filOrd)
+
+      # ===== Gren 1: ordinaere fagkoder =====
+      {
+        ?fk a u:fagkode ;
+            u:kode ?fagkode ;
+            u:tittel ?fagkodeTittel ;
+            u:opplaeringsnivaa d:opplaeringsnivaa_videregaaende ;
+            u:status st:publisert ;
+            u:opplaeringsfag/u:programomraader-referanse ?po ;
+            u:opplaeringsfag/u:tittel ?fag ;
+            u:opplaeringsfag/u:for-aarstrinn/u:kode ?forAa .
+        FILTER(LANG(?fagkodeTittel) = "default")
+        FILTER(LANG(?fag) = "default")
+
+        ?po u:kode ?poKode .
+
+        OPTIONAL {
+          ?fk u:opplaeringsfag/u:laereplan-referanse ?lp .
+          ?lp u:status st:publisert ;
+              u:kortform ?lpKortform .
+          FILTER(LANG(?lpKortform) = "default")
+        }
+        OPTIONAL {
+          ?fk u:naar-gis-det-undervisning-foerste-semester/u:tittel ?uFSemRaw .
+          FILTER(LANG(?uFSemRaw) = "default")
+        }
+        OPTIONAL {
+          ?fk u:naar-gis-det-undervisning-siste-semester/u:tittel ?uSSemRaw .
+          FILTER(LANG(?uSSemRaw) = "default")
+        }
+        OPTIONAL {
+          ?fk u:naar-kan-man-ta-eksamen-foerste-semester/u:tittel ?xFSemRaw .
+          FILTER(LANG(?xFSemRaw) = "default")
+        }
+        OPTIONAL {
+          ?fk u:naar-kan-man-ta-eksamen-siste-semester/u:tittel ?xSSemRaw .
+          FILTER(LANG(?xSSemRaw) = "default")
+        }
+
+        BIND(IRI(CONCAT("https://www.udir.no/lk20/fagkoder/", STR(?fagkode))) AS ?udirNoLenke)
+
+        OPTIONAL { ?fk u:benyttes-sammen-med/u:kode ?benSammenMed . }
+      }
+
+      UNION
+
+      # ===== Gren 2: IOP-koder =====
+      {
+        VALUES ?fagkode { "IOP1000" "IOP2000" "IOP3000" "IOP4000" "IOP5000" }
+        ?fk a u:fagkode ;
+            u:kode ?fagkode ;
+            u:tittel ?fagkodeTittel ;
+            u:opplaeringsnivaa d:opplaeringsnivaa_videregaaende ;
+            u:status st:publisert ;
+            u:naar-gis-det-undervisning-foerste-semester/u:tittel ?uFSemRaw .
+        FILTER(LANG(?uFSemRaw) = "default")
+        FILTER(LANG(?fagkodeTittel) = "default")
+
+        OPTIONAL {
+          ?fk u:naar-gis-det-undervisning-siste-semester/u:tittel ?uSSemRaw .
+          FILTER(LANG(?uSSemRaw) = "default")
+        }
+
+        BIND("IOP" AS ?poKode)
+        BIND(STRLANG("IOP", "default") AS ?lpKortform)
+        BIND(SUBSTR(?fagkode, 4, 1) AS ?_aar)
+        BIND(STRLANG(CONCAT("IOP ", ?_aar, ". år"), "default") AS ?fag)
+        BIND(IRI(CONCAT("https://www.udir.no/lk20/fagkoder/", STR(?fagkode))) AS ?udirNoLenke)
+        VALUES ?forAa { "vg1" "vg2" "vg3" }
+      }
+
+      # ---- felles semestervindu-filter (begge grener likt) ----
+      # Ukjent/uparsebar foerstesemester  -> ordinal 2       (slipper gjennom).
+      BIND(COALESCE(LCASE(STR(?uFSemRaw)), "") AS ?uF_str)
+      BIND(COALESCE(xsd:integer(REPLACE(?uF_str, "^\\D*(\\d{4}).*$", "$1")), 0) AS ?uF_year)
+      BIND(IF(CONTAINS(?uF_str, "vår") || CONTAINS(?uF_str, "vaar"), 1, 2) AS ?uF_idx)
+      BIND((?uF_year * 2) + ?uF_idx AS ?uF_ord)
+
+      # Ingen sistesemester -> ordinal 999999 (regnes som "fortsatt aktivt").
+      BIND(COALESCE(LCASE(STR(?uSSemRaw)), "") AS ?uS_str)
+      BIND(COALESCE(xsd:integer(REPLACE(?uS_str, "^\\D*(\\d{4}).*$", "$1")), 999999) AS ?uS_year)
+      BIND(IF(?uS_str = "", 999999,
+              (?uS_year * 2) + IF(CONTAINS(?uS_str, "vår") || CONTAINS(?uS_str, "vaar"), 1, 2)
+             ) AS ?uS_ord)
+
+      FILTER(?uF_ord <= ?filOrd && ?uS_ord >= ?filOrd)
+    }
+    ORDER BY ?fagkode ?poKode ?lpKortform ?forAa ?benSammenMed
+  }
+}
+GROUP BY ?fag ?fagkode ?fagkodeTittel ?udirNoLenke
+ORDER BY LCASE(STR(?fag)) ?fagkode

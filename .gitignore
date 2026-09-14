@@ -44,3 +44,7 @@ next-env.d.ts
 # rå OWL-kilde (idé 7, Docs/ideer-ai-stotte.md) – skal ikke committes rått,
 # kun et kuratert JSON-uttrekk generert av /scripts (når det finnes)
 Docs/*.ttl
+
+# /test (fuseki-test): lokale batch-rapporter. Del én med:
+#   git add -f data/reports/<id>.json
+data/
