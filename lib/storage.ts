@@ -12,6 +12,7 @@ export type Tab = {
 export type ViewMode = "editor" | "both" | "results";
 
 const K_TABS = "sparql.tabs.v1";
+const K_TABS_UPDATED_AT = "sparql.tabs.updatedAt.v1";
 const K_ACTIVE = "sparql.activeTab.v1";
 const K_VIEW = "sparql.viewMode.v1";
 const K_ENDPOINT = "sparql.endpointName.v1";
@@ -55,7 +56,14 @@ export function loadTabs(): { tabs: Tab[]; activeId: string } {
   return { tabs, activeId };
 }
 
-export const saveTabs = (tabs: Tab[]) => write(K_TABS, tabs);
+export const saveTabs = (tabs: Tab[]) => {
+  write(K_TABS, tabs);
+  write(K_TABS_UPDATED_AT, Date.now());
+};
+/** Tidspunkt (ms) for siste lokale fane-lagring – brukt til å avgjøre om lokalt eller
+ * eksternt (Supabase) er nyest når begge finnes, se app/page.tsx sin fane-synk. 0 hvis
+ * ingenting er lagret lokalt ennå. */
+export const loadTabsUpdatedAt = (): number => read<number>(K_TABS_UPDATED_AT, 0);
 export const saveActiveId = (id: string) => write(K_ACTIVE, id);
 
 export const loadViewMode = (): ViewMode => read<ViewMode>(K_VIEW, "both");

@@ -29,6 +29,7 @@ import {
   loadViewMode,
   loadCustomEndpoints,
   loadEndpointName,
+  loadTabsUpdatedAt,
   saveTabs,
   saveActiveId,
   saveViewMode,
@@ -141,6 +142,10 @@ export default function Page() {
   }, [hydrated, viewMode]);
 
   // ── Fane-synk mot Supabase når innlogget ──────────────────────────────────
+  // Sist-skrevet-vinner mellom lokalt og eksternt (basert på tidsstempler), ikke "eksternt
+  // vinner alltid": en debounced skylagring (se effekten under) som ikke rakk fullføre før en
+  // refresh eller en navigering bort fra siden gjorde ellers at det ferske innholdet som
+  // nettopp ble lastet inn fra localStorage ble overskrevet med en eldre sky-versjon.
   useEffect(() => {
     if (!authEnabled || !user || !hydrated) {
       setRemoteReady(false);
@@ -151,7 +156,9 @@ export default function Page() {
       try {
         const remote = await loadRemoteTabs();
         if (cancelled) return;
-        if (remote && remote.tabs.length > 0) {
+        const remoteMs = remote ? new Date(remote.updatedAt).getTime() : 0;
+        const localMs = loadTabsUpdatedAt();
+        if (remote && remote.tabs.length > 0 && remoteMs > localMs) {
           setTabs(remote.tabs);
           setActiveId(
             remote.activeId && remote.tabs.some((t) => t.id === remote.activeId)

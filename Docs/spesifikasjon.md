@@ -162,8 +162,12 @@ via secret-nøkkelen. Første admin må opprettes manuelt i Supabase (Auth → U
 - `user_tabs` (user_id PK, data jsonb, active_id, updated_at) – hele fane-arrayen som blob.
 
 **Frontend:**
-- Innlogget: faner synkes til `user_tabs` (debouncet ~0,8 s); ved lasting vinner DB over
-  `localStorage`. Utlogget: `localStorage` som før.
+- Innlogget: faner synkes til `user_tabs` (debouncet ~0,8 s). Ved lasting sammenlignes
+  tidsstempler (`user_tabs.updated_at` mot en lokal `localStorage`-tidsstempel satt ved hver
+  lokale lagring) – sist skrevet vinner, ikke DB ubetinget. Unngår at en refresh eller
+  navigering rett etter en redigering (før den debouncede skylagringen rekker å fullføre)
+  mister endringen ved at DB-en (fortsatt med forrige versjon) overskriver den ferske lokale.
+  Utlogget: `localStorage` som før.
 - «Lagre spørring» (tittel foreslått fra fanenavn / første linje) + «Lagrede»-nedtrekk i
   editor-verktøylinja → åpner valgt spørring i **ny fane**. `endpoint_name` lagres og vises
   som informasjon under tittelen, men styrer ikke lenger aktivt endepunkt ved åpning – man
