@@ -179,6 +179,17 @@ export default function HjelpPage() {
           property-posisjon, som setter inn hele spennet fra start av «første» til slutt av
           «siste»-semesteret med et FILTER mot en gitt dato.
         </p>
+        <p>
+          Hvis variabelen kan være <i>ubundet</i> (f.eks. fordi du selv har skrevet trippelen som
+          binder den som <code className="font-mono">OPTIONAL</code>) – bruk{" "}
+          <code className="font-mono">#+ semester++:</code> i stedet for{" "}
+          <code className="font-mono">#+ semester:</code>. Da settes resultatet til en
+          sentinel-verdi når variabelen mangler, i stedet for å stå ubundet: tidligst mulig dato
+          (<code className="font-mono">0001-01-01</code>) hvis det er{" "}
+          <i>første</i>-semesteret som mangler, senest mulig dato (
+          <code className="font-mono">9999-12-31</code>) hvis det er <i>siste</i>-semesteret som
+          mangler.
+        </p>
       </Section>
 
       <Section title="5. #+? (AI-beskrivelse av spørringen)">

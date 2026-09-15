@@ -13,6 +13,17 @@ const LK20_EPOCH = "2020-08-01";
 const EVIGHET = "9999-12-31";
 
 /**
+ * Sentinel for `#+ semester++:` (Are, 2026-09-15) – brukes når selve
+ * semester-variabelen er ubundet (typisk fordi trippelen som binder den er
+ * skrevet OPTIONAL av brukeren), i stedet for idé 2s reform-spesifikke
+ * LK06/LK20-nullpunkt: semester-par gjelder flere typer (programområde/
+ * utdanningsprogram/fagkode), ikke bare læreplaner, så en absolutt
+ * "tidligst mulig"-dato er riktigere enn å gjette reform ut fra typen.
+ * EVIGHET over gjenbrukes symmetrisk for manglende siste-semester.
+ */
+const TIDENES_MORGEN = "0001-01-01";
+
+/**
  * Idé 2 (se Docs/ideer-ai-stotte.md): mønster for koblinger som selv har en
  * gyldighetsperiode (ikke objektene i seg selv), jf. Grepwiki "Blanke noder
  * for gyldighetsinformasjon i referanseobjekter". Property-navnet på bNoden
@@ -137,14 +148,23 @@ function buildSemesterVarighetSnippetTemplate(pair: SemesterPair): string {
  * semesteret (se buildSemesterVarighetSnippetTemplate over for samme
  * dato-logikk) – ukjent hvilken side betyr at det ikke er en kjent
  * semester-property i det hele tatt.
+ *
+ * `#+ semester++:` (Are, 2026-09-15) er samme BIND, men med `withFallback`:
+ * hvis variabelen selv er ubundet (typisk en bevisst OPTIONAL-trippel som
+ * ikke matcher for raden – snippeten rører ikke ved selve trippelen, det er
+ * opp til brukeren), COALESCE'es resultatet til TIDENES_MORGEN (manglende
+ * "første") eller EVIGHET (manglende "siste") i stedet for å la ?outVar stå
+ * ubundet – samme COALESCE-mønster som idé 2 bruker for gyldig-fra/-til.
  */
-function buildSemesterDatoBind(variable: string, outVar: string, isEnd: boolean): string {
+function buildSemesterDatoBind(variable: string, outVar: string, isEnd: boolean, withFallback: boolean): string {
   const hoestSuffix = isEnd ? "-12-31" : "-08-01";
   const vaarSuffix = isEnd ? "-07-31" : "-01-01";
-  return (
-    `BIND (xsd:date(CONCAT(STRAFTER(STRAFTER(str(?${variable}), "semester_"), "_"), ` +
-    `IF(CONTAINS(str(?${variable}), "hoest"), "${hoestSuffix}", "${vaarSuffix}"))) AS ?${outVar})`
-  );
+  const expr =
+    `xsd:date(CONCAT(STRAFTER(STRAFTER(str(?${variable}), "semester_"), "_"), ` +
+    `IF(CONTAINS(str(?${variable}), "hoest"), "${hoestSuffix}", "${vaarSuffix}")))`;
+  if (!withFallback) return `BIND (${expr} AS ?${outVar})`;
+  const sentinel = isEnd ? EVIGHET : TIDENES_MORGEN;
+  return `BIND (COALESCE(${expr}, "${sentinel}"^^xsd:date) AS ?${outVar})`;
 }
 
 /** Henter "?fS" eller "fS" ut av en `#+ semester: …`-beskrivelse (evt. med mer tekst rundt, f.eks. "?fS til dato"). */
@@ -167,7 +187,12 @@ function errorOption(message: string): Completion {
  * ikke er en kjent første/siste-semester-property) gir et feilforslag i
  * stedet for å gjette – samme "ingen fallback"-prinsipp som resten av idé 3.
  */
-function buildSemesterDatoOption(description: string, precedingText: string, terms: OntologyTerm[]): Completion {
+function buildSemesterDatoOption(
+  description: string,
+  precedingText: string,
+  terms: OntologyTerm[],
+  withFallback: boolean,
+): Completion {
   const variable = extractSemesterVariable(description);
   if (!variable) {
     return errorOption(`Fant ingen variabel i "${description}" (forventet f.eks. "?fS").`);
@@ -184,13 +209,16 @@ function buildSemesterDatoOption(description: string, precedingText: string, ter
   const propLocalName = lastMatch[1];
   const isEnd = propLocalName.endsWith("siste-semester");
   const outVar = `${variable}Dato`;
-  const bind = buildSemesterDatoBind(variable, outVar, isEnd);
+  const bind = buildSemesterDatoBind(variable, outVar, isEnd, withFallback);
+  const fallbackNote = withFallback
+    ? ` Ubundet ?${variable} (f.eks. en OPTIONAL-trippel som ikke matcher) gir ${isEnd ? `EVIGHET (${EVIGHET})` : `TIDENES_MORGEN (${TIDENES_MORGEN})`} i stedet for ubundet ?${outVar}.`
+    : "";
 
   return {
-    label: `semester → dato: ?${outVar}`,
+    label: `semester${withFallback ? "++" : ""} → dato: ?${outVar}`,
     type: "keyword",
     detail: `fra u:${propLocalName}`,
-    info: `Binder ?${outVar} til datoen for ${isEnd ? "slutten" : "starten"} av semesteret i ?${variable} (vår = jan–jul, høst = aug–des – kalenderhalvår, se idé 4).`,
+    info: `Binder ?${outVar} til datoen for ${isEnd ? "slutten" : "starten"} av semesteret i ?${variable} (vår = jan–jul, høst = aug–des – kalenderhalvår, se idé 4).${fallbackNote}`,
     apply: (view, _completion, from, to) => {
       view.dispatch({ changes: { from, to, insert: bind } });
     },
@@ -330,6 +358,12 @@ const DESCRIBE_LABEL = "AI: beskriv spørringen";
  * buildSemesterDatoOption i idé 4/5-delen over. Trenger derfor OWL-
  * kunnskapen (`getTerms`, samme kilde som idé 1/4s regelbaserte fullføring)
  * for å kjenne igjen semester-properties.
+ *
+ * `#+ semester++: <variabel>` (Are, 2026-09-15) er samme tema, men med
+ * COALESCE-fallback: dekker tilfellet der variabelen selv kan være ubundet
+ * (f.eks. en bevisst OPTIONAL-trippel), og gir TIDENES_MORGEN/EVIGHET i
+ * stedet for et ubundet resultat – snippeten rører ikke ved selve trippelen,
+ * kun BIND-en.
  */
 export function aiAssistCompletionSource(getTerms: () => OntologyTerm[]) {
   return async (context: CompletionContext): Promise<CompletionResult | null> => {
@@ -362,12 +396,12 @@ export function aiAssistCompletionSource(getTerms: () => OntologyTerm[]) {
       return { from: describeMatch.from, to: describeMatch.to, options: [option], filter: false };
     }
 
-    const match = context.matchBefore(/#\+\s*(regex|filter|semester)\s*:\s*.+/i);
+    const match = context.matchBefore(/#\+\s*(regex|filter|semester\+\+|semester)\s*:\s*.+/i);
     if (!match) return null;
 
-    const parsed = /^#\+\s*(regex|filter|semester)\s*:\s*(.+)$/i.exec(match.text);
+    const parsed = /^#\+\s*(regex|filter|semester\+\+|semester)\s*:\s*(.+)$/i.exec(match.text);
     if (!parsed) return null;
-    const topic = parsed[1].toLowerCase() as "regex" | "filter" | "semester";
+    const topic = parsed[1].toLowerCase() as "regex" | "filter" | "semester" | "semester++";
     const description = parsed[2].trim();
     if (!description) return null;
 
@@ -376,8 +410,8 @@ export function aiAssistCompletionSource(getTerms: () => OntologyTerm[]) {
     // i motsetning til idé 1/2s eksakte regelbaserte oppslag som trenger den narrowe scopen).
     const precedingQuery = context.state.sliceDoc(0, match.from);
 
-    if (topic === "semester") {
-      const option = buildSemesterDatoOption(description, precedingQuery, getTerms());
+    if (topic === "semester" || topic === "semester++") {
+      const option = buildSemesterDatoOption(description, precedingQuery, getTerms(), topic === "semester++");
       return { from: match.from, to: match.to, options: [option], filter: false };
     }
 

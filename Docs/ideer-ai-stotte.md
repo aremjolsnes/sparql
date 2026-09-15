@@ -481,6 +481,53 @@ loggen), og ikke kjørt mot ekte Fuseki-data ennå – bør retestes med reelle
 `?fS`-verdier fra en faktisk spørring før den regnes som ferdig verifisert i
 praksis.
 
+**Utvidelse – `#+ semester++: <variabel>` for ubundne variabler (Are,
+2026-09-15):** `#+ semester:` over forutsetter at variabelen faktisk er
+bundet. Are ønsket en variant som også håndterer at variabelen kan være
+*ubundet* – typisk fordi brukeren selv har skrevet trippelen som binder den
+som `OPTIONAL` (f.eks. et fagkode-objekt som ikke alltid har et
+`foerste-semester` satt) – og i så fall COALESCE til en fornuftig
+sentinel-verdi i stedet for å la resultat-variabelen stå ubundet: "tidenes
+morgen" (tidligst mulig) hvis det er *første*-semesteret som mangler,
+"evighet" (senest mulig) hvis det er *siste*-semesteret som mangler – samme
+retning som idé 2s gyldig-fra/-til-COALESCE.
+
+To åpne spørsmål ble avklart før bygging:
+1. **Hvilken konkret dato er "tidenes morgen"?** Vurdert opp mot å gjenbruke
+   idé 2s reform-spesifikke LK06/LK20-nullpunkt (2006-08-01/2020-08-01) –
+   forkastet, siden semester-parene brukes på flere typer (programområde/
+   utdanningsprogram/fagkode), ikke bare læreplaner, så en reform-epoke ville
+   vært en feilaktig antagelse i de andre tilfellene. Valgt i stedet en
+   absolutt sentinel-dato, `0001-01-01` (`TIDENES_MORGEN`), symmetrisk med
+   den eksisterende `EVIGHET`-konstanten (`9999-12-31`) fra idé 2, som
+   gjenbrukes uendret for manglende siste-semester.
+2. **Skal snippeten selv pakke trippelen inn i `OPTIONAL`?** Nei, bevisst
+   valgt bort (samme grensesnitt-prinsipp som idé 2s "hele koblingen
+   OPTIONAL"-variant, som heller ikke bygges automatisk) – `semester++`
+   rører kun BIND-en, ikke trippelen. Brukeren skriver selv `OPTIONAL` rundt
+   trippelen som binder variabelen, hvis det er det de vil ha; snippeten
+   virker uansett hvorfor variabelen måtte være ubundet.
+
+**Bygget:** [lib/sparqlCompletion.ts](../lib/sparqlCompletion.ts) – samme
+`#+`-mekanisme utvidet til å gjenkjenne `semester\+\+` som eget alternativ i
+regex-mønsteret (ved siden av `regex`/`filter`/`semester`), rutet til
+`buildSemesterDatoOption(..., withFallback: true)`. `buildSemesterDatoBind()`
+pakker nå uttrykket i `COALESCE(..., "<sentinel>"^^xsd:date)` når
+`withFallback` er satt – ellers uendret BIND som før (idé 3s "ingen
+fallback ved ukjent tema" gjelder fortsatt: ukjent variabel eller ukjent
+property gir samme feilforslag som for `semester:`, uavhengig av `++`).
+
+**Verifisert:** typecheck + lint rent (ingen nye feil). Logikk-test (`tsx`,
+midlertidig, fjernet igjen) mot `aiAssistCompletionSource()`: (1)
+`semester++` på en `OPTIONAL`-bundet `foerste-semester`-variabel ga
+`COALESCE(..., "0001-01-01"^^xsd:date)`; (2) tilsvarende for
+`siste-semester` ga `COALESCE(..., "9999-12-31"^^xsd:date)`; (3) vanlig
+`semester:` (uten `++`) er uendret – ingen COALESCE (regresjonstestet); (4)
+ukjent variabel med `semester++` gir samme feilforslag som `semester:`, ikke
+krasj. Ikke kjørt mot ekte Fuseki-data (ingen tilgjengelig endepunkt-tilgang
+i dette miljøet) og ikke visuelt bekreftet i nettleser – samme
+miljøbegrensning som resten av loggen.
+
 ## 6. 🔵 Prefiks i tabell, hel URI i CSV
 
 Vis forkortet form (`d:NOR01-07`) for URI-er i resultattabellen, men full URI ved
