@@ -52,7 +52,7 @@ export default function SparqlEditor({ value, onChange, onRun }: Props) {
           autocomplete: sparqlCompletionSource(() => termsRef.current),
         }),
         sparqlLanguage.data.of({
-          autocomplete: aiAssistCompletionSource(),
+          autocomplete: aiAssistCompletionSource(() => termsRef.current),
         }),
         oneDark,
         EditorView.lineWrapping,

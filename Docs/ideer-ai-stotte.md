@@ -352,9 +352,10 @@ samme sandboks-begrensning som resten av idé 3 (ingen ekte nettleser
 tilgjengelig). Ikke visuelt bekreftet.
 
 **Flere `#+`-temaer å vurdere (forslag, ikke bygget, 2026-09-11):**
-- `semester:` – direkte kobling til idé 4/5 under (semester→dato-binding).
-  Kunne gjenbrukt denne mekanismen i stedet for separat regelbasert logikk,
-  men idé 4/5s åpne punkt om datointervall må avklares først.
+- ~~`semester:` – direkte kobling til idé 4/5 under (semester→dato-binding).~~
+  **Bygget (2026-09-15), se idé 4/5s "Utvidelse"-avsnitt** – rent
+  regelbasert (ikke AI), for å konvertere en allerede bundet
+  semester-variabel til en dato.
 - `optional:` – adresserer de to SPARQL-fellene fra idé 2s debug-sesjon
   (kommentar som sluker en `}`, FILTER som refererer en variabel bundet
   *etter* OPTIONAL – stille, gale resultater). Vurdert som mest verdt å
@@ -436,6 +437,49 @@ begge domene-variantene: `semester_hoest_2007` → `2007-08-01`,
 `semester_vaar_2021` → `2021-07-31` (og tilsvarende for flere andre
 år/rader) – riktig utregnet i alle tilfeller, og FILTER mot en gitt dato
 returnerte kun rader der spennet faktisk dekker datoen.
+
+**Utvidelse – `#+ semester: <variabel>` for allerede bundne variabler (Are,
+2026-09-15):** snippeten over dekker kun ferske property-par satt inn via
+`u:`-dropdownen. Are ønsket i tillegg å kunne konvertere en variabel som
+*allerede* er bundet et annet sted i spørringen (f.eks. `u:foerste-semester
+?fS .` skrevet fra før) til en dato-variabel, uten å skrive inn hele paret
+på nytt.
+
+Innledningsvis foreslått via idé 3s frie `#+ regex:`-mekanisme (`#+ regex:
+?fS til dato`), men implementert som et eget, rent regelbasert tredje tema
+på samme `#+`-mekanisme i stedet: `#+ semester: <variabel>` (aksepterer både
+`?fS` og friere fraser som «?fS til dato» – første `?variabel`-token i
+beskrivelsen brukes). Dette var allerede skissert som fremtidig tema i idé
+3s liste under («semester:» – direkte kobling til idé 4/5) og gir samme
+presisjonsnivå uten LLM-hallusinasjonsrisiko, siden hvilken property som
+bandt variabelen kan slås opp tekstlig i spørringen (samme
+"siste-binding-vinner"-prinsipp som `refVar`-gjenkjenningen i idé 2), i
+stedet for at en AI skal tolke fritekst og selv huske vår/høst-reglene.
+
+**Bygget:** [lib/sparqlCompletion.ts](../lib/sparqlCompletion.ts) –
+`buildSemesterDatoOption()`, kalt fra `aiAssistCompletionSource()` (som nå
+tar `getTerms` som parameter, i likhet med `sparqlCompletionSource()`, for å
+kjenne igjen semester-properties). Søker i spørringsteksten før `#+`-linja
+etter siste `u:<kjent-semester-property> ?<variabel>`-treff, avgjør start
+vs. slutt av semesteret fra om lokalnavnet slutter på
+`foerste-semester`/`siste-semester` (samme dato-logikk som gjenbrukes fra
+snippeten over – ny felles hjelpefunksjon `buildSemesterDatoBind()`), og
+setter inn `BIND (... AS ?<variabel>Dato)`. Ingen kjent binding funnet →
+feilforslag med no-op `apply` (samme "ingen fallback"-prinsipp som resten av
+idé 3), ikke en gjetning.
+
+**Verifisert:** typecheck + lint rent (ingen nye feil). Logikk-test (`tsx`,
+midlertidig, fjernet igjen) mot `aiAssistCompletionSource()` med ekte
+`CompletionContext`/`EditorState`: (1) Ares eksakte eksempel (`u:foerste-
+semester ?fS .` + `#+ semester: ?fS til dato`) ga korrekt `BIND` for start av
+semesteret; (2) `u:siste-semester`-varianten ga korrekt slutt-dato (des-31/
+jul-31 i stedet for aug-01/jan-01); (3) ukjent variabel ga feilforslag med
+no-op apply, ikke krasj; (4) ikke-eksplisitt fremkalling ga fortsatt `null`;
+(5) regex:/filter:-grenene er uendret (regresjonstestet). Ikke visuelt
+bekreftet i en faktisk nettleser (samme miljøbegrensning som resten av
+loggen), og ikke kjørt mot ekte Fuseki-data ennå – bør retestes med reelle
+`?fS`-verdier fra en faktisk spørring før den regnes som ferdig verifisert i
+praksis.
 
 ## 6. 🔵 Prefiks i tabell, hel URI i CSV
 

@@ -48,7 +48,7 @@ export default function HjelpPage() {
       </div>
 
       <p className="text-sm text-muted">
-        Editoren har fire former for skrivehjelp, alle fremkalt med <b>Ctrl+Space</b> (eller
+        Editoren har fem former for skrivehjelp, alle fremkalt med <b>Ctrl+Space</b> (eller
         automatisk dropdown mens du skriver, for de to første). Bakgrunn og utviklingshistorikk
         står i{" "}
         <a
@@ -154,7 +154,34 @@ export default function HjelpPage() {
         </div>
       </Section>
 
-      <Section title="4. #+? (AI-beskrivelse av spørringen)">
+      <Section title="4. #+ semester: (regelbasert, ikke AI)">
+        <p>
+          Skriv <code className="font-mono">#+ semester: ?variabel</code> på en kommentarlinje
+          (eller en friere frase som inneholder variabelen, f.eks.{" "}
+          <code className="font-mono">#+ semester: ?fS til dato</code>) for å konvertere en
+          variabel som allerede er bundet via en <code className="font-mono">foerste-semester</code>
+          - eller <code className="font-mono">siste-semester</code>-property (f.eks.{" "}
+          <code className="font-mono">u:foerste-semester ?fS .</code>) til en dato-variabel. Cursor
+          på linja, trykk <b>Ctrl+Space</b> og <b>Enter</b>. I motsetning til #3/#5 er dette rent
+          regelbasert (ingen nettverkskall) – hvilken property som bandt variabelen slås opp
+          tekstlig i spørringen, så forslaget er umiddelbart.
+        </p>
+        <Example
+          before={"?s u:foerste-semester ?fS .\n#+ semester: ?fS til dato"}
+          after={
+            '?s u:foerste-semester ?fS .\nBIND (xsd:date(CONCAT(STRAFTER(STRAFTER(str(?fS), "semester_"), "_"), IF(CONTAINS(str(?fS), "hoest"), "-08-01", "-01-01"))) AS ?fSDato)'
+          }
+          note='"Første"-siden gir start av semesteret (vår → 01-01, høst → 08-01).'
+        />
+        <p className="text-muted text-xs">
+          For et ferskt property-par (ikke en variabel du allerede har) – bruk i stedet
+          «semester-varighet» fra <code className="font-mono">u:</code>-dropdownen i
+          property-posisjon, som setter inn hele spennet fra start av «første» til slutt av
+          «siste»-semesteret med et FILTER mot en gitt dato.
+        </p>
+      </Section>
+
+      <Section title="5. #+? (AI-beskrivelse av spørringen)">
         <p>
           Motsatt retning av #3: sett inn en linje med bare{" "}
           <code className="font-mono">#+?</code> (f.eks. øverst i spørringen), cursor på linja,

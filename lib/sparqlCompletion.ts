@@ -86,12 +86,15 @@ type SemesterPair = {
   labelNb: string | null;
 };
 
-function findSemesterPairs(terms: OntologyTerm[]): SemesterPair[] {
+function semesterProps(terms: OntologyTerm[]): OntologyTerm[] {
   const SEMESTER = U + "semester";
-  const semesterProps = terms.filter((t) => t.kind !== "class" && t.range.includes(SEMESTER));
-  const byLocalName = new Map(semesterProps.map((t) => [localName(t.uri), t]));
+  return terms.filter((t) => t.kind !== "class" && t.range.includes(SEMESTER));
+}
+
+function findSemesterPairs(terms: OntologyTerm[]): SemesterPair[] {
+  const byLocalName = new Map(semesterProps(terms).map((t) => [localName(t.uri), t]));
   const pairs: SemesterPair[] = [];
-  for (const t of semesterProps) {
+  for (const t of byLocalName.values()) {
     const ln = localName(t.uri);
     if (!ln.endsWith("foerste-semester")) continue;
     const prefix = ln.slice(0, -"foerste-semester".length); // "" eller f.eks. "naar-gis-det-undervisning-"
@@ -119,6 +122,79 @@ function buildSemesterVarighetSnippetTemplate(pair: SemesterPair): string {
       `IF(CONTAINS(str(?${rawTil}), "hoest"), "-12-31", "-07-31"))) AS ?${dateTil})`,
     `FILTER (?${dateFra} <= "\${dato}"^^xsd:date && ?${dateTil} >= "\${dato}"^^xsd:date)\${}`,
   ].join("\n");
+}
+
+/**
+ * Utvidelse av idé 4/5 (Are, 2026-09-15): samme regelbaserte semester→dato-
+ * utregning, men for én *allerede bundet* variabel i stedet for et fersk
+ * innsatt property-par. Trigges via `#+ semester: ?variabel` (idé 3s
+ * `#+`-mekanisme, men rent regelbasert – ingen LLM-kall, i motsetning til
+ * regex:/filter: – siden hvilken property som bandt variabelen kan slås opp
+ * tekstlig i spørringen som allerede står skrevet, akkurat som gyldighet-
+ * mønsterets refVar-gjenkjenning i idé 2).
+ *
+ * "Første"/"siste" i property-lokalnavnet avgjør start vs. slutt av
+ * semesteret (se buildSemesterVarighetSnippetTemplate over for samme
+ * dato-logikk) – ukjent hvilken side betyr at det ikke er en kjent
+ * semester-property i det hele tatt.
+ */
+function buildSemesterDatoBind(variable: string, outVar: string, isEnd: boolean): string {
+  const hoestSuffix = isEnd ? "-12-31" : "-08-01";
+  const vaarSuffix = isEnd ? "-07-31" : "-01-01";
+  return (
+    `BIND (xsd:date(CONCAT(STRAFTER(STRAFTER(str(?${variable}), "semester_"), "_"), ` +
+    `IF(CONTAINS(str(?${variable}), "hoest"), "${hoestSuffix}", "${vaarSuffix}"))) AS ?${outVar})`
+  );
+}
+
+/** Henter "?fS" eller "fS" ut av en `#+ semester: …`-beskrivelse (evt. med mer tekst rundt, f.eks. "?fS til dato"). */
+function extractSemesterVariable(description: string): string | null {
+  const withMarker = /\?(\w+)/.exec(description);
+  if (withMarker) return withMarker[1];
+  const bare = /^(\w+)$/.exec(description.trim());
+  return bare ? bare[1] : null;
+}
+
+function errorOption(message: string): Completion {
+  return { label: message, type: "keyword", apply: () => {} };
+}
+
+/**
+ * Bygger completion-forslaget for `#+ semester: <variabel>`: finner hvilken
+ * kjent semester-property som sist bandt variabelen tidligere i spørringen
+ * (samme "siste binding vinner"-prinsipp som lastObjectVariable), og setter
+ * inn riktig BIND. Ingen match (ukjent variabel, eller bundet av noe som
+ * ikke er en kjent første/siste-semester-property) gir et feilforslag i
+ * stedet for å gjette – samme "ingen fallback"-prinsipp som resten av idé 3.
+ */
+function buildSemesterDatoOption(description: string, precedingText: string, terms: OntologyTerm[]): Completion {
+  const variable = extractSemesterVariable(description);
+  if (!variable) {
+    return errorOption(`Fant ingen variabel i "${description}" (forventet f.eks. "?fS").`);
+  }
+
+  const knownLocalNames = new Set(semesterProps(terms).map((t) => localName(t.uri)));
+  const bindingRe = new RegExp(`u:([\\w-]+)\\s+\\?${variable}\\b`, "g");
+  const matches = [...precedingText.matchAll(bindingRe)].filter((m) => knownLocalNames.has(m[1]));
+  const lastMatch = matches[matches.length - 1];
+  if (!lastMatch) {
+    return errorOption(`Fant ingen kjent semester-property som binder ?${variable} tidligere i spørringen.`);
+  }
+
+  const propLocalName = lastMatch[1];
+  const isEnd = propLocalName.endsWith("siste-semester");
+  const outVar = `${variable}Dato`;
+  const bind = buildSemesterDatoBind(variable, outVar, isEnd);
+
+  return {
+    label: `semester → dato: ?${outVar}`,
+    type: "keyword",
+    detail: `fra u:${propLocalName}`,
+    info: `Binder ?${outVar} til datoen for ${isEnd ? "slutten" : "starten"} av semesteret i ?${variable} (vår = jan–jul, høst = aug–des – kalenderhalvår, se idé 4).`,
+    apply: (view, _completion, from, to) => {
+      view.dispatch({ changes: { from, to, insert: bind } });
+    },
+  };
 }
 
 /** Sist bundne "?variabel" som objekt for en u:-property i blokka (f.eks. "?of" i "u:etter-fag ?of"). */
@@ -248,8 +324,14 @@ const DESCRIBE_LABEL = "AI: beskriv spørringen";
  * ferdig formatert som `#`-linjer av API-et) erstatter `#+?`-linja. Ingen
  * `description` å parse ut her (i motsetning til regex/filter over), derfor
  * egen gren med eget regex-mønster.
+ *
+ * Utvidelse (Are, 2026-09-15): `#+ semester: <variabel>` er et tredje tema på
+ * samme `#+`-mekanisme, men rent regelbasert (ingen LLM-kall) – se
+ * buildSemesterDatoOption i idé 4/5-delen over. Trenger derfor OWL-
+ * kunnskapen (`getTerms`, samme kilde som idé 1/4s regelbaserte fullføring)
+ * for å kjenne igjen semester-properties.
  */
-export function aiAssistCompletionSource() {
+export function aiAssistCompletionSource(getTerms: () => OntologyTerm[]) {
   return async (context: CompletionContext): Promise<CompletionResult | null> => {
     if (!context.explicit) return null;
 
@@ -280,12 +362,12 @@ export function aiAssistCompletionSource() {
       return { from: describeMatch.from, to: describeMatch.to, options: [option], filter: false };
     }
 
-    const match = context.matchBefore(/#\+\s*(regex|filter)\s*:\s*.+/i);
+    const match = context.matchBefore(/#\+\s*(regex|filter|semester)\s*:\s*.+/i);
     if (!match) return null;
 
-    const parsed = /^#\+\s*(regex|filter)\s*:\s*(.+)$/i.exec(match.text);
+    const parsed = /^#\+\s*(regex|filter|semester)\s*:\s*(.+)$/i.exec(match.text);
     if (!parsed) return null;
-    const topic = parsed[1].toLowerCase() as "regex" | "filter";
+    const topic = parsed[1].toLowerCase() as "regex" | "filter" | "semester";
     const description = parsed[2].trim();
     if (!description) return null;
 
@@ -293,6 +375,11 @@ export function aiAssistCompletionSource() {
     // "." – for narrowt for et LLM-kall som skal gjenkjenne variabler fra tidligere tripler,
     // i motsetning til idé 1/2s eksakte regelbaserte oppslag som trenger den narrowe scopen).
     const precedingQuery = context.state.sliceDoc(0, match.from);
+
+    if (topic === "semester") {
+      const option = buildSemesterDatoOption(description, precedingQuery, getTerms());
+      return { from: match.from, to: match.to, options: [option], filter: false };
+    }
 
     let option: Completion;
     try {
