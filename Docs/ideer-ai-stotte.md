@@ -338,7 +338,9 @@ på en utledet verdi (f.eks. et sant/usant-flagg).
 statisk side som beskriver og gir eksempler for alle tre støtteverktøyene
 (u:-fullføring, gyldighet-mønster, `#+ regex:`/`#+ filter:`), inkl.
 fallgruven over. Lenket fra et «(?)»-ikon i toppmenyen i
-[app/page.tsx](../app/page.tsx) (åpner i ny fane).
+[app/page.tsx](../app/page.tsx) – åpnet i samme fane (endret fra ny fane,
+Are, 2026-09-16), med «Til workbench»-lenke tilbake til `/` på selve
+hjelpesiden.
 
 **Verifisert:** typecheck + lint rent (samme 8 pre-eksisterende feil som før
 – inkl. én i `app/profil/page.tsx` for nøyaktig samme `<a href="/">`-mønster

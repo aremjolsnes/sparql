@@ -459,8 +459,6 @@ export default function Page() {
         <div className="flex items-center justify-end gap-3 px-5 pt-2 pb-1 text-sm">
           <a
             href="/hjelp"
-            target="_blank"
-            rel="noopener noreferrer"
             title="Hjelp: verktøystøtte i editoren"
             className="w-6 h-6 flex items-center justify-center rounded-full border border-border text-xs text-muted hover:bg-panel-2 hover:text-foreground"
           >
