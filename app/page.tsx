@@ -15,6 +15,8 @@ import {
   buildResourceQuery,
   resultVars,
   toCsv,
+  toMarkdownTable,
+  toQueryAndMarkdown,
 } from "@/lib/sparql";
 import { useAuth } from "@/components/AuthProvider";
 import AuthBar from "@/components/AuthBar";
@@ -84,6 +86,8 @@ export default function Page() {
   const [notice, setNotice] = useState<string | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editorBoxRef = useRef<HTMLDivElement | null>(null);
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+  const downloadMenuRef = useRef<HTMLDivElement | null>(null);
 
   const { enabled: authEnabled, user } = useAuth();
   const [remoteReady, setRemoteReady] = useState(false);
@@ -115,6 +119,17 @@ export default function Page() {
   useEffect(() => {
     if (hydrated) saveEndpointName(endpointName);
   }, [endpointName, hydrated]);
+
+  useEffect(() => {
+    if (!downloadMenuOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (downloadMenuRef.current && !downloadMenuRef.current.contains(e.target as Node)) {
+        setDownloadMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [downloadMenuOpen]);
 
   // Editorhøyde: bruk lagret verdi, og lagre når brukeren drar i hjørnet.
   useEffect(() => {
@@ -423,18 +438,39 @@ export default function Page() {
     setRuns((r) => ({ ...r, [activeTab.id]: { ...r[activeTab.id]!, page: p } }));
   }
 
-  function downloadCsv() {
-    if (!run || run.kind !== "table") return;
-    const csv = toCsv(run.vars, run.bindings);
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  function triggerDownload(filename: string, content: string, mime: string, bom = false) {
+    const blob = new Blob([bom ? "﻿" + content : content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${(activeTab.name ?? "sparql").replace(/[^\w.-]+/g, "_")}.csv`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  type DownloadFormat = "csv" | "md" | "qmd";
+
+  function downloadAs(format: DownloadFormat) {
+    if (!run || run.kind !== "table") return;
+    const baseName = (activeTab.name ?? "sparql").replace(/[^\w.-]+/g, "_");
+    if (format === "csv") {
+      triggerDownload(`${baseName}.csv`, toCsv(run.vars, run.bindings), "text/csv;charset=utf-8", true);
+    } else if (format === "md") {
+      triggerDownload(
+        `${baseName}.md`,
+        toMarkdownTable(run.vars, run.bindings),
+        "text/markdown;charset=utf-8",
+      );
+    } else {
+      triggerDownload(
+        `${baseName}.md`,
+        toQueryAndMarkdown(activeTab.query, run.vars, run.bindings),
+        "text/markdown;charset=utf-8",
+      );
+    }
+    setDownloadMenuOpen(false);
   }
 
   if (!hydrated) {
@@ -557,15 +593,39 @@ export default function Page() {
         {/* Resultater */}
         {showResults && (
           <section className="flex flex-col gap-2">
-            {/* CSV + paginering */}
+            {/* Nedlasting + paginering */}
             <div className="flex items-center justify-between gap-3">
-              <button
-                onClick={downloadCsv}
-                disabled={!run || run.kind !== "table" || run.bindings.length === 0}
-                className="border border-border rounded px-3 py-1 text-sm hover:bg-panel-2 disabled:opacity-40"
-              >
-                Last ned som CSV
-              </button>
+              <div className="relative" ref={downloadMenuRef}>
+                <button
+                  onClick={() => setDownloadMenuOpen((v) => !v)}
+                  disabled={!run || run.kind !== "table" || run.bindings.length === 0}
+                  className="border border-border rounded px-3 py-1 text-sm hover:bg-panel-2 disabled:opacity-40"
+                >
+                  Last ned som … ▾
+                </button>
+                {downloadMenuOpen && (
+                  <div className="absolute left-0 top-full mt-1 w-56 z-40 border border-border rounded bg-panel shadow-xl">
+                    <button
+                      onClick={() => downloadAs("csv")}
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-panel-2"
+                    >
+                      CSV
+                    </button>
+                    <button
+                      onClick={() => downloadAs("md")}
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-panel-2"
+                    >
+                      .MD (markdown-tabell)
+                    </button>
+                    <button
+                      onClick={() => downloadAs("qmd")}
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-panel-2"
+                    >
+                      Spørring + .MD
+                    </button>
+                  </div>
+                )}
+              </div>
               {run?.kind === "table" && (
                 <Pagination page={page} pageCount={pageCount} onChange={setPage} />
               )}

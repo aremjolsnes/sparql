@@ -91,3 +91,38 @@ export function toCsv(vars: string[], bindings: Record<string, SparqlTerm>[]): s
   }
   return lines.join("\r\n");
 }
+
+/** Markdown-escaping av celleverdi: rømmer `|`, erstatter linjeskift med `<br>`. */
+function mdCell(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\r\n|\r|\n/g, "<br>");
+}
+
+/** Bygger en markdown-formatert tabell fra hele resultatsettet. */
+export function toMarkdownTable(vars: string[], bindings: Record<string, SparqlTerm>[]): string {
+  const lines = [
+    `| ${vars.map(mdCell).join(" | ")} |`,
+    `| ${vars.map(() => "---").join(" | ")} |`,
+  ];
+  for (const row of bindings) {
+    lines.push(`| ${vars.map((v) => mdCell(row[v]?.value ?? "")).join(" | ")} |`);
+  }
+  return lines.join("\n");
+}
+
+/** Bygger spørring som kodesnutt + resultat som markdown-tabell. */
+export function toQueryAndMarkdown(
+  query: string,
+  vars: string[],
+  bindings: Record<string, SparqlTerm>[],
+): string {
+  return [
+    "### Spørring",
+    "```sparql",
+    query.trim(),
+    "```",
+    "",
+    "### Resultat",
+    toMarkdownTable(vars, bindings),
+    "",
+  ].join("\n");
+}
