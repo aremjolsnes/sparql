@@ -190,6 +190,13 @@ export default function HjelpPage() {
           <code className="font-mono">9999-12-31</code>) hvis det er <i>siste</i>-semesteret som
           mangler.
         </p>
+        <Example
+          before={"?s OPTIONAL { ?s u:foerste-semester ?fS . }\n#+ semester++: ?fS"}
+          after={
+            '?s OPTIONAL { ?s u:foerste-semester ?fS . }\nBIND (COALESCE(xsd:date(CONCAT(STRAFTER(STRAFTER(str(?fS), "semester_"), "_"), IF(CONTAINS(str(?fS), "hoest"), "-08-01", "-01-01"))), "0001-01-01"^^xsd:date) AS ?fSDato)'
+          }
+          note='Matcher ikke OPTIONAL-en (?fS ubundet) → ?fSDato blir "0001-01-01" i stedet for ubundet. Snippeten rører ikke selve OPTIONAL-en – den skriver du selv.'
+        />
       </Section>
 
       <Section title="5. #+? (AI-beskrivelse av spørringen)">
