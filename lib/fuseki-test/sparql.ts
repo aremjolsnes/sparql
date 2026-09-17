@@ -29,6 +29,22 @@ export function rowCount(r: SparqlResults | null): number | null {
 
 const XSD_STRING = "http://www.w3.org/2001/XMLSchema#string";
 
+/**
+ * Sorts the comma-separated tokens of a `GROUP_CONCAT(DISTINCT …; separator=", ")`
+ * value so that element order doesn't count as a difference. SPARQL doesn't
+ * guarantee stable ordering for `DISTINCT` inside `GROUP_CONCAT` across engines,
+ * even with an inner `ORDER BY` (see Docs/ideer-ai-stotte.md, idé 11) — GraphDB
+ * and Jena Fuseki have been observed to tie-break differently for the exact same
+ * underlying data. A plain (non-aggregated) literal never varies in token order
+ * between engines, so this is safe to apply unconditionally to literals.
+ */
+function canonListValue(value: string): string {
+  if (!value.includes(",")) return value;
+  const parts = value.split(",").map((p) => p.trim());
+  if (parts.length < 2) return value;
+  return [...parts].sort().join(", ");
+}
+
 function canonTerm(t: Term): string {
   // Legacy Sesame/GraphDB JSON uses "typed-literal"; RDF 1.1 uses "literal".
   const type = t.type === "typed-literal" ? "literal" : t.type ?? "";
@@ -37,7 +53,8 @@ function canonTerm(t: Term): string {
   // RDF 1.1: a plain string literal and an xsd:string literal are the same term.
   // GraphDB omits the datatype, Jena/Fuseki emits xsd:string — normalise both.
   if (type === "literal" && lang === "" && datatype === XSD_STRING) datatype = "";
-  return JSON.stringify([type, t.value ?? "", lang, datatype]);
+  const value = type === "literal" ? canonListValue(t.value ?? "") : t.value ?? "";
+  return JSON.stringify([type, value, lang, datatype]);
 }
 
 /**

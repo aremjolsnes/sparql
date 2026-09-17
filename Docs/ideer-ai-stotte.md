@@ -674,6 +674,55 @@ Ikke visuelt bekreftet i en faktisk nettleser – krever innlogget Supabase-økt
 (samme auth-flyt som resten av appen), som ikke var tilgjengelig i dette
 miljøet uten Ares egne brukeropplysninger.
 
+## 11. 🔵 Rekkefølge-uavhengig sammenligning av kommaseparerte felt i /test
+
+Idé fra Are (2026-09-17), oppdaget via `/test` sin «Feltavvik»-tabell: et felt
+bygget med `GROUP_CONCAT(DISTINCT …; separator=", ")` (typisk `progOmr`,
+`laereplan`, `forAarstrinn`, `benyttesSammenMed` i `Fagkoder-vår-2026.rq`) kan
+vise som avvik mellom GraphDB og Jena Fuseki selv når *innholdet* er identisk
+– bare rekkefølgen på elementene inni strengen er ulik. Spørringen har allerede
+et forsøk på å gjøre denne rekkefølgen deterministisk (indre `ORDER BY` i en
+subquery, se kommentar-punkt 4 i selve `.rq`-fila), men SPARQL 1.1 garanterer
+strengt tatt ikke at `DISTINCT`-avduplisering i `GROUP_CONCAT` respekterer en
+ytre sortering – de to motorene ser ut til å tie-breake ulikt når flere
+verdier «er like» på sorteringsnøkkelen.
+
+**Forslag:** la `/test` sin feltsammenligning (`fieldDiffs()`/`canonTerm()` i
+[lib/fuseki-test/sparql.ts](../lib/fuseki-test/sparql.ts)) gjenkjenne
+kommaseparerte lister og sammenligne dem som *sett* (sorter tokens før
+sammenligning) i stedet for som eksakte strenger, slik at bare reelle
+innholdsforskjeller i slike felt dukker opp i «Feltavvik»-tabellen – rene
+rekkefølge-varianter fra motor-tie-breaking skal ikke telle som avvik.
+
+**Avklart (2026-09-17):** ingen feltnavn-konvensjon nødvendig – kommalisten
+gjenkjennes strukturelt (verdien inneholder minst to komma-separerte tokens),
+ikke via feltnavn. Vurdert som trygt å anvende ubetinget på alle literals:
+et vanlig (ikke-aggregert) literal-felt vil aldri variere i indre rekkefølge
+mellom motorene (det er bare `GROUP_CONCAT(DISTINCT ...)`-resultater som gjør
+det), så sortering før sammenligning endrer aldri utfallet for andre felt.
+Ingen eget «likt innhold, ulik rekkefølge»-merke bygget – rene
+rekkefølge-varianter forsvinner nå helt fra «Feltavvik»-tabellen (samme prinsipp
+som eksisterende tom-streng/ubundet-normalisering i `canonTerm()`), i stedet
+for å vises med en forklarende merkelapp.
+
+**Bygget:** `canonListValue()` i
+[lib/fuseki-test/sparql.ts](../lib/fuseki-test/sparql.ts) – splitter en
+literal-verdi på `,`, trimmer og sorterer tokens, brukt i `canonTerm()` (som
+allerede er det ene knutepunktet både rad-nivå multiset-sammenligning og
+felt-nivå `fieldDiffs()` går via, så ingen andre call-sites trengte endring).
+En verdi uten komma, eller med færre enn to tokens, er uendret (ingen kostnad
+for vanlige felt).
+
+**Verifisert:** typecheck + lint rent. Midlertidig logikk-test (`tsx`,
+fjernet igjen) mot `diffResults()`: (1) den faktiske `progOmr`-rekkefølge-
+varianten fra den virkelige `feltavvik.csv`-eksempelen tidligere i samtalen
+gir nå `equal: true`/0 avvik (var tidligere et falskt avvik); (2) en ekte
+innholdsforskjell (`"AAA, BBB, CCC"` mot `"CCC, BBB, DDD"`) fanges fortsatt
+opp korrekt som ulik; (3) den eksisterende tom-streng/ubundet-regresjonen
+(`isEmptyLiteral`) er uendret. Ikke kjørt mot ekte Fuseki-data i denne
+omgangen (allerede empirisk bekreftet mot ekte respons-data via CSV-en fra
+tidligere i samtalen).
+
 ---
 
 ## Diskusjon
