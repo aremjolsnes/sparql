@@ -80,7 +80,8 @@
 
 .fuseki-test textarea,
 .fuseki-test input[type="text"],
-.fuseki-test input[type="number"] {
+.fuseki-test input[type="number"],
+.fuseki-test select {
   width: 100%;
   font-family: var(--mono);
   font-size: 0.9rem;

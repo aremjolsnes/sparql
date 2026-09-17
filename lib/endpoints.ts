@@ -17,8 +17,13 @@ export type Endpoint = {
  */
 export const BUILTIN_ENDPOINTS: Endpoint[] = [
   {
+    name: "Fuseki Dev",
+    url: "https://ca-sparql-dev.yellowbeach-43b18c61.norwayeast.azurecontainerapps.io/201906/query",
+    builtin: true,
+  },
+  {
     name: "Fuseki Beta",
-    url: "http://ca-sparql-beta.whitedune-e5bf55cb.norwayeast.azurecontainerapps.io/201906/query",
+    url: "https://ca-sparql-beta.whitedune-e5bf55cb.norwayeast.azurecontainerapps.io/201906/query",
     builtin: true,
   },
   {

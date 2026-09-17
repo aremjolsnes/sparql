@@ -15,7 +15,8 @@ Listen ligger server-side (env-var / konfigfil). Bare visningsnavnet vises i UI-
 
 | Visningsnavn      | URL                                                                                          | Merknad          |
 |-------------------|--------------------------------------------------------------------------------------------- |------------------|
-| Fuseki Beta       | `http://ca-sparql-beta.whitedune-e5bf55cb.norwayeast.azurecontainerapps.io/201906/query`    | Default          |
+| Fuseki Dev        | `https://ca-sparql-dev.yellowbeach-43b18c61.norwayeast.azurecontainerapps.io/201906/query`  |                  |
+| Fuseki Beta       | `https://ca-sparql-beta.whitedune-e5bf55cb.norwayeast.azurecontainerapps.io/201906/query`   | Default          |
 | Beta              | `https://sparql-beta-data.udir.no/repositories/201906`                                       |                  |
 | Prod              | `https://sparql-data.udir.no/repositories/201906`                                            |                  |
 

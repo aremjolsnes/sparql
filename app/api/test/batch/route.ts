@@ -3,7 +3,12 @@ import { getEndpoints } from "@/lib/fuseki-test/endpoints";
 import { runComparison } from "@/lib/fuseki-test/benchmark";
 import { diffResults } from "@/lib/fuseki-test/sparql";
 import { listQueries, newReportId, saveReport } from "@/lib/fuseki-test/store";
-import type { BatchItem, BatchReport, DiffResult } from "@/lib/fuseki-test/types";
+import type {
+  BatchItem,
+  BatchReport,
+  DiffResult,
+  DiffRow,
+} from "@/lib/fuseki-test/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +28,23 @@ function diffSummary(d: DiffResult): string {
   if (d.equal) return `${d.rows?.identical ?? 0} rader, like`;
   const p = d.rows?.onlyInProd.length ?? 0;
   const t = d.rows?.onlyInTest.length ?? 0;
-  return `avvik: ${p} kun dagens, ${t} kun test`;
+  const countNote =
+    d.rows && d.rows.prodCount !== d.rows.testCount
+      ? `${d.rows.prodCount} mot ${d.rows.testCount} treff; `
+      : "";
+  return `avvik: ${countNote}${p} kun dagens, ${t} kun test`;
+}
+
+/** Rows extra on the side with more hits, when the two sides have different counts. */
+function extraOnLargerSide(
+  d: DiffResult,
+): { side: "prod" | "test"; rows: DiffRow[]; truncated: boolean } | null {
+  if (!d.comparable || d.kind !== "select" || !d.rows) return null;
+  const { prodCount, testCount, onlyInProd, onlyInTest, truncated } = d.rows;
+  if (prodCount === testCount) return null;
+  return prodCount > testCount
+    ? { side: "prod", rows: onlyInProd, truncated }
+    : { side: "test", rows: onlyInTest, truncated };
 }
 
 export async function POST(req: Request) {
@@ -70,6 +91,7 @@ export async function POST(req: Request) {
         concurrency,
       });
       const diff = diffResults(prod.parsed, test.parsed);
+      const extra = extraOnLargerSide(diff);
       items.push({
         name: q.name,
         query: q.query,
@@ -82,6 +104,13 @@ export async function POST(req: Request) {
         diffComparable: diff.comparable,
         diffEqual: diff.equal,
         diffSummary: diffSummary(diff),
+        rowsEqual:
+          prod.stats.rowCount != null && test.stats.rowCount != null
+            ? prod.stats.rowCount === test.stats.rowCount
+            : null,
+        extraSide: extra?.side ?? null,
+        extraRows: extra?.rows ?? [],
+        extraTruncated: extra?.truncated ?? false,
       });
     } catch (e) {
       items.push({
@@ -96,6 +125,10 @@ export async function POST(req: Request) {
         diffComparable: false,
         diffEqual: false,
         diffSummary: "feilet",
+        rowsEqual: null,
+        extraSide: null,
+        extraRows: [],
+        extraTruncated: false,
         error: String((e as Error).message ?? e),
       });
     }

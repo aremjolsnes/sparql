@@ -124,6 +124,14 @@ export interface BatchItem {
   diffComparable: boolean;
   diffEqual: boolean;
   diffSummary: string;
+  /** Whether prodRows === testRows. Null when either count is unknown (e.g. ASK, or an error). */
+  rowsEqual: boolean | null;
+  /** Which side has more hits, when rowsEqual is false. */
+  extraSide: "prod" | "test" | null;
+  /** Rows present (extra) only on the `extraSide`, capped like DiffResult.rows.onlyInProd/onlyInTest. */
+  extraRows: DiffRow[];
+  /** True if there were more extra rows than fit in extraRows. */
+  extraTruncated: boolean;
   error?: string;
 }
 

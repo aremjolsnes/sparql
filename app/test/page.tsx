@@ -17,6 +17,19 @@ select * where {
   ?s a u:aarstrinn .
 }`;
 
+const TEST_URL_PRESETS = [
+  {
+    label: "Dev",
+    url: "https://ca-sparql-dev.yellowbeach-43b18c61.norwayeast.azurecontainerapps.io/201906/query",
+  },
+  {
+    label: "Beta",
+    url: "https://ca-sparql-beta.whitedune-e5bf55cb.norwayeast.azurecontainerapps.io/201906/query",
+  },
+];
+
+const CUSTOM_TEST_URL = "__custom__";
+
 function ms(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return "–";
   return n >= 1000 ? `${(n / 1000).toFixed(2)} s` : `${n.toFixed(0)} ms`;
@@ -327,14 +340,36 @@ export default function Page() {
             onChange={(e) => setProdUrl(e.target.value)}
           />
           <label htmlFor="tu" style={{ marginTop: "0.75rem" }}>
-            Test (Fuseki)
+            Test
           </label>
-          <input
+          <select
             id="tu"
-            type="text"
-            value={testUrl}
-            onChange={(e) => setTestUrl(e.target.value)}
-          />
+            value={
+              TEST_URL_PRESETS.some((p) => p.url === testUrl)
+                ? testUrl
+                : CUSTOM_TEST_URL
+            }
+            onChange={(e) => {
+              if (e.target.value !== CUSTOM_TEST_URL) setTestUrl(e.target.value);
+            }}
+          >
+            {TEST_URL_PRESETS.map((p) => (
+              <option key={p.url} value={p.url}>
+                {p.label} – {p.url}
+              </option>
+            ))}
+            <option value={CUSTOM_TEST_URL}>Egendefinert…</option>
+          </select>
+          {!TEST_URL_PRESETS.some((p) => p.url === testUrl) && (
+            <input
+              id="tu-custom"
+              type="text"
+              placeholder="https://…"
+              value={testUrl}
+              onChange={(e) => setTestUrl(e.target.value)}
+              style={{ marginTop: "0.5rem" }}
+            />
+          )}
         </div>
       </details>
 
@@ -471,6 +506,23 @@ function Results({ data }: { data: ComparisonResponse }) {
                 <td>
                   {diff.rows.prodCount} / {diff.rows.testCount} (
                   {diff.rows.identical} like)
+                </td>
+              </tr>
+              <tr>
+                <th>Antall treff</th>
+                <td>
+                  {diff.rows.prodCount === diff.rows.testCount ? (
+                    <span className="banner ok" style={inlineBadge}>
+                      likt antall
+                    </span>
+                  ) : (
+                    <span className="banner bad" style={inlineBadge}>
+                      ulikt antall ({diff.rows.prodCount > diff.rows.testCount
+                        ? "flest i dagens"
+                        : "flest i test"}
+                      )
+                    </span>
+                  )}
                 </td>
               </tr>
               {diff.vars && !diff.vars.equal && (
@@ -628,4 +680,11 @@ const smallBtn: React.CSSProperties = {
   marginRight: "0.5rem",
   padding: "0.55rem 1rem",
   fontSize: "0.9rem",
+};
+
+const inlineBadge: React.CSSProperties = {
+  display: "inline-block",
+  margin: 0,
+  padding: "0.1rem 0.5rem",
+  fontSize: "0.8rem",
 };
