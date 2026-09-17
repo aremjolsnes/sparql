@@ -5,6 +5,7 @@ import type {
   SingleCall,
 } from "./types";
 import { rowCount, tryParse } from "./sparql";
+import { adaptQueryForEndpoint } from "./endpoints";
 
 interface RawCall {
   call: SingleCall;
@@ -206,15 +207,21 @@ export async function runComparison(
 ): Promise<{ prod: EndpointResult; test: EndpointResult }> {
   const concurrency = Math.max(1, Math.floor(p.concurrency ?? 1));
 
+  // `st:` (status-prefikset) betyr ulik ting på ulike endepunkter (Beta-repoet
+  // bruker beta-data.udir.no, alle andre bruker data.udir.no) – tilpass
+  // spørringen per side før den sendes, se lib/fuseki-test/endpoints.ts.
+  const prodQuery = adaptQueryForEndpoint(p.query, endpoints.prod);
+  const testQuery = adaptQueryForEndpoint(p.query, endpoints.test);
+
   const prodCold = await prime(
     endpoints.prod,
-    p.query,
+    prodQuery,
     p.warmup,
     p.timeoutMs,
   );
   const testCold = await prime(
     endpoints.test,
-    p.query,
+    testQuery,
     p.warmup,
     p.timeoutMs,
   );
@@ -228,22 +235,22 @@ export async function runComparison(
 
   if (concurrency === 1) {
     for (let i = 0; i < p.iterations; i++) {
-      const a = await timedCall(endpoints.prod, p.query, p.timeoutMs);
+      const a = await timedCall(endpoints.prod, prodQuery, p.timeoutMs);
       prodSamples.push(a.call);
       prodBody.feed(a);
-      const b = await timedCall(endpoints.test, p.query, p.timeoutMs);
+      const b = await timedCall(endpoints.test, testQuery, p.timeoutMs);
       testSamples.push(b.call);
       testBody.feed(b);
     }
   } else {
-    const mkTasks = (url: string) =>
+    const mkTasks = (url: string, query: string) =>
       Array.from(
         { length: p.iterations },
-        () => () => timedCall(url, p.query, p.timeoutMs),
+        () => () => timedCall(url, query, p.timeoutMs),
       );
 
     const p0 = performance.now();
-    const pr = await pool(mkTasks(endpoints.prod), concurrency);
+    const pr = await pool(mkTasks(endpoints.prod, prodQuery), concurrency);
     prodWall = performance.now() - p0;
     for (const r of pr) {
       prodSamples.push(r.call);
@@ -251,7 +258,7 @@ export async function runComparison(
     }
 
     const t0 = performance.now();
-    const te = await pool(mkTasks(endpoints.test), concurrency);
+    const te = await pool(mkTasks(endpoints.test, testQuery), concurrency);
     testWall = performance.now() - t0;
     for (const r of te) {
       testSamples.push(r.call);
