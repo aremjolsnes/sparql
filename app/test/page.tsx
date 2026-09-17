@@ -7,10 +7,12 @@ import type {
   ComparisonResponse,
   DiffRow,
   EndpointResult,
+  MismatchSample,
   NumStats,
   SavedQuery,
   Term,
 } from "@/lib/fuseki-test/types";
+import { csvCell } from "@/lib/sparql";
 
 const SAMPLE_QUERY = `PREFIX u: <http://psi.udir.no/ontologi/kl06/>
 select * where {
@@ -60,6 +62,38 @@ function fmtTerm(t: Term | null): string {
   if (t.type && t.type !== "literal" && t.type !== "uri") s += ` [${t.type}]`;
   else if (t.type === "uri") s += " [uri]";
   return s;
+}
+
+function mismatchToCsv(samples: MismatchSample[]): string {
+  const header = ["#", "Felt", "Dagens (GraphDB)", "Test (Fuseki)"];
+  const lines = [header.map(csvCell).join(",")];
+  samples.forEach((s, si) => {
+    for (const f of s.fields) {
+      lines.push(
+        [String(si + 1), f.key, fmtTerm(f.prod), fmtTerm(f.test)]
+          .map(csvCell)
+          .join(","),
+      );
+    }
+  });
+  return lines.join("\r\n");
+}
+
+function triggerDownload(
+  filename: string,
+  content: string,
+  mime: string,
+  bom = false,
+) {
+  const blob = new Blob([bom ? "﻿" + content : content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export default function Page() {
@@ -573,7 +607,35 @@ function Results({ data }: { data: ComparisonResponse }) {
 
           {diff.rows.mismatchSamples.length > 0 && (
             <>
-              <h2>Feltavvik</h2>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  justifyContent: "space-between",
+                  gap: "0.75rem",
+                }}
+              >
+                <h2 style={{ margin: "1.75rem 0 0.5rem" }}>Feltavvik</h2>
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    triggerDownload(
+                      "feltavvik.csv",
+                      mismatchToCsv(diff.rows!.mismatchSamples),
+                      "text/csv;charset=utf-8",
+                      true,
+                    );
+                  }}
+                  style={{
+                    color: "var(--accent)",
+                    textDecoration: "underline",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Last ned CSV
+                </a>
+              </div>
               <p className="sub" style={{ margin: "0 0 0.5rem" }}>
                 Avvikende rader paret på tvers av endepunktene; bare feltene som
                 faktisk er ulike vises.

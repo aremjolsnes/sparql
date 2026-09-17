@@ -76,7 +76,7 @@ export function buildResourceQuery(uri: string, role: TermRole): string {
 const FORMULA_PREFIX = /^[=+\-@\t\r]/;
 
 /** CSV-escaping med vern mot formel-injeksjon i regneark. */
-function csvCell(value: string): string {
+export function csvCell(value: string): string {
   let v = value;
   if (FORMULA_PREFIX.test(v)) v = "'" + v;
   if (/[",\n\r]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
