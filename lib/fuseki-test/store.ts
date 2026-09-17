@@ -1,17 +1,13 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { del, list, put } from "@vercel/blob";
+import { adminConfigured, secretClient } from "@/lib/supabase/admin";
 import type { BatchReport, BatchReportSummary, SavedQuery } from "./types";
 
 const QUERIES_DIR = path.join(process.cwd(), "queries");
 const REPORTS_DIR = path.join(process.cwd(), "data", "reports");
 
-const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
-/** With a Blob token we persist to Vercel Blob; without it we use the local filesystem. */
-const useBlob = Boolean(BLOB_TOKEN);
-
-const Q_PREFIX = "queries/";
-const R_PREFIX = "reports/";
+/** With Supabase configured we persist there; without it we use the local filesystem. */
+const useSupabase = adminConfigured();
 
 /** Filename-safe query name: letters, numbers, space, _ and - only. */
 export function safeName(name: string): string {
@@ -28,36 +24,6 @@ function safeId(id: string): string {
   const s = id.replace(/[^0-9A-Za-z_-]/g, "");
   if (!s) throw new Error("Ugyldig id.");
   return s;
-}
-
-// ---------------------------------------------------------------------------
-// Blob helpers
-// ---------------------------------------------------------------------------
-
-async function blobList(prefix: string) {
-  const out: { pathname: string; url: string; uploadedAt: Date }[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await list({ prefix, cursor, token: BLOB_TOKEN });
-    out.push(...page.blobs);
-    cursor = page.hasMore ? page.cursor : undefined;
-  } while (cursor);
-  return out;
-}
-
-async function blobText(url: string): Promise<string | null> {
-  const res = await fetch(url, { cache: "no-store" });
-  return res.ok ? res.text() : null;
-}
-
-async function blobPut(pathname: string, body: string, contentType: string) {
-  await put(pathname, body, {
-    access: "public",
-    token: BLOB_TOKEN,
-    contentType,
-    addRandomSuffix: false,
-    allowOverwrite: true,
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -83,25 +49,20 @@ async function listQueryFiles(): Promise<SavedQuery[]> {
   }
 }
 
-async function listQueryBlobs(): Promise<SavedQuery[]> {
-  const blobs = await blobList(Q_PREFIX);
-  const out: SavedQuery[] = [];
-  for (const b of blobs) {
-    if (!b.pathname.endsWith(".rq")) continue;
-    const query = await blobText(b.url);
-    if (query != null) {
-      out.push({ name: b.pathname.slice(Q_PREFIX.length, -3), query });
-    }
-  }
-  return out;
+async function listSupabaseQueries(): Promise<SavedQuery[]> {
+  const { data, error } = await secretClient()
+    .from("fuseki_test_queries")
+    .select("name, query");
+  if (error) throw error;
+  return (data ?? []) as SavedQuery[];
 }
 
 export async function listQueries(): Promise<SavedQuery[]> {
   const files = await listQueryFiles();
-  if (!useBlob) return files;
+  if (!useSupabase) return files;
   const map = new Map<string, SavedQuery>();
   for (const q of files) map.set(q.name, q); // committed baseline
-  for (const q of await listQueryBlobs()) map.set(q.name, q); // Blob overrides
+  for (const q of await listSupabaseQueries()) map.set(q.name, q); // Supabase overrides
   return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, "no"));
 }
 
@@ -110,8 +71,14 @@ export async function saveQuery(
   query: string,
 ): Promise<SavedQuery> {
   const n = safeName(name);
-  if (useBlob) {
-    await blobPut(`${Q_PREFIX}${n}.rq`, query, "text/plain; charset=utf-8");
+  if (useSupabase) {
+    const { error } = await secretClient()
+      .from("fuseki_test_queries")
+      .upsert(
+        { name: n, query, updated_at: new Date().toISOString() },
+        { onConflict: "name" },
+      );
+    if (error) throw error;
   } else {
     await fs.mkdir(QUERIES_DIR, { recursive: true });
     await fs.writeFile(path.join(QUERIES_DIR, `${n}.rq`), query, "utf8");
@@ -121,10 +88,15 @@ export async function saveQuery(
 
 export async function deleteQuery(name: string): Promise<void> {
   const n = safeName(name);
-  if (useBlob) {
-    const pathname = `${Q_PREFIX}${n}.rq`;
-    const hit = (await blobList(pathname)).find((b) => b.pathname === pathname);
-    if (!hit) {
+  if (useSupabase) {
+    const client = secretClient();
+    const { data, error: selErr } = await client
+      .from("fuseki_test_queries")
+      .select("name")
+      .eq("name", n)
+      .maybeSingle();
+    if (selErr) throw selErr;
+    if (!data) {
       throw Object.assign(
         new Error(
           "Innebygde spørringer kan ikke slettes – bare de du selv har lagret.",
@@ -132,7 +104,11 @@ export async function deleteQuery(name: string): Promise<void> {
         { code: "EBUILTIN" },
       );
     }
-    await del(hit.url, { token: BLOB_TOKEN });
+    const { error } = await client
+      .from("fuseki_test_queries")
+      .delete()
+      .eq("name", n);
+    if (error) throw error;
   } else {
     await fs.rm(path.join(QUERIES_DIR, `${n}.rq`), { force: true });
   }
@@ -143,18 +119,17 @@ export async function deleteQuery(name: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function saveReport(report: BatchReport): Promise<void> {
-  const body = JSON.stringify(report, null, 2);
-  if (useBlob) {
-    await blobPut(
-      `${R_PREFIX}${safeId(report.id)}.json`,
-      body,
-      "application/json",
-    );
+  const id = safeId(report.id);
+  if (useSupabase) {
+    const { error } = await secretClient()
+      .from("fuseki_test_reports")
+      .insert({ id, created_at: report.createdAt, data: report });
+    if (error) throw error;
   } else {
     await fs.mkdir(REPORTS_DIR, { recursive: true });
     await fs.writeFile(
-      path.join(REPORTS_DIR, `${safeId(report.id)}.json`),
-      body,
+      path.join(REPORTS_DIR, `${id}.json`),
+      JSON.stringify(report, null, 2),
       "utf8",
     );
   }
@@ -162,12 +137,14 @@ export async function saveReport(report: BatchReport): Promise<void> {
 
 export async function getReport(id: string): Promise<BatchReport | null> {
   const sid = safeId(id);
-  if (useBlob) {
-    const pathname = `${R_PREFIX}${sid}.json`;
-    const hit = (await blobList(pathname)).find((b) => b.pathname === pathname);
-    if (!hit) return null;
-    const raw = await blobText(hit.url);
-    return raw ? (JSON.parse(raw) as BatchReport) : null;
+  if (useSupabase) {
+    const { data, error } = await secretClient()
+      .from("fuseki_test_reports")
+      .select("data")
+      .eq("id", sid)
+      .maybeSingle();
+    if (error) throw error;
+    return (data?.data as BatchReport) ?? null;
   }
   try {
     const raw = await fs.readFile(
@@ -200,20 +177,13 @@ function summarize(r: BatchReport): BatchReportSummary {
 }
 
 export async function listReportSummaries(): Promise<BatchReportSummary[]> {
-  if (useBlob) {
-    const blobs = await blobList(R_PREFIX);
-    const out: BatchReportSummary[] = [];
-    for (const b of blobs) {
-      if (!b.pathname.endsWith(".json")) continue;
-      const raw = await blobText(b.url);
-      if (!raw) continue;
-      try {
-        out.push(summarize(JSON.parse(raw) as BatchReport));
-      } catch {
-        /* skip */
-      }
-    }
-    return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  if (useSupabase) {
+    const { data, error } = await secretClient()
+      .from("fuseki_test_reports")
+      .select("data")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map((row) => summarize(row.data as BatchReport));
   }
   try {
     const files = (await fs.readdir(REPORTS_DIR)).filter((f) =>

@@ -10,7 +10,7 @@ function writeError(e: unknown): NextResponse {
     return NextResponse.json(
       {
         error:
-          "Lagring feilet: filsystemet er skrivebeskyttet. På Vercel må en Blob-store være koblet til (env-var BLOB_READ_WRITE_TOKEN); lokalt kjør npm run dev.",
+          "Lagring feilet: filsystemet er skrivebeskyttet, og Supabase er ikke koblet til (env-var NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY / SUPABASE_SECRET_KEY). Lokalt kjør npm run dev.",
       },
       { status: 501 },
     );
