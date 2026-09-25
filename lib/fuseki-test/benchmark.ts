@@ -207,8 +207,8 @@ export async function runComparison(
 ): Promise<{ prod: EndpointResult; test: EndpointResult }> {
   const concurrency = Math.max(1, Math.floor(p.concurrency ?? 1));
 
-  // `st:` (status-prefikset) betyr ulik ting på ulike endepunkter (Beta-repoet
-  // bruker beta-data.udir.no, alle andre bruker data.udir.no) – tilpass
+  // `st:` (status-prefikset) kan avvike per endepunkt (i dag har alle
+  // data.udir.no, men gamle spørringer kan ha beta-data.udir.no) – tilpass
   // spørringen per side før den sendes, se lib/fuseki-test/endpoints.ts.
   const prodQuery = adaptQueryForEndpoint(p.query, endpoints.prod);
   const testQuery = adaptQueryForEndpoint(p.query, endpoints.test);

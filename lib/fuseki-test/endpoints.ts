@@ -34,10 +34,9 @@ export function getEndpoints(
 
 /**
  * Prefiks-overstyringer for et gitt endepunkt, gjenkjent på URL mot
- * BUILTIN_ENDPOINTS (samme liste hovedsiden bruker). Kun Beta-repoet
- * (sparql-beta-data.udir.no) har `st:` i beta-data.udir.no – alle andre
- * kjente endepunkter (Prod, Fuseki Dev, Fuseki Beta) og ukjente/egendefinerte
- * URL-er bruker default (data.udir.no, se FIXED_PREFIXES).
+ * BUILTIN_ENDPOINTS (samme liste hovedsiden bruker). Ingen innebygde endepunkter
+ * har overstyringer lenger (Beta har Prod-data), så alle får default
+ * (data.udir.no, se FIXED_PREFIXES) – men mekanismen er beholdt.
  */
 function prefixOverridesFor(url: string): Record<string, string> {
   const match = BUILTIN_ENDPOINTS.find((e) => e.url === url.trim());
@@ -46,7 +45,7 @@ function prefixOverridesFor(url: string): Record<string, string> {
 
 /**
  * Tilpasser en spørring til et gitt endepunkt: bytter ut en deklarert `st:`-
- * verdi som er en kjent variant (data.udir.no / beta-data.udir.no) med den
+ * verdi som er en kjent variant (data.udir.no / gamle beta-data.udir.no) med den
  * verdien endepunktet faktisk bruker. Se lib/prefixes.ts sin ensurePrefixes.
  */
 export function adaptQueryForEndpoint(query: string, url: string): string {

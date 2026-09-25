@@ -10,7 +10,9 @@ export const FIXED_PREFIXES: Record<string, string> = {
 
 /**
  * Kjente varianter av en prefiks-verdi som betyr «samme ting» på ulike endepunkter.
- * Beta-repoet bruker `beta-data.udir.no` i status-URI-ene, Prod bruker `data.udir.no`.
+ * Beta-repoet brukte tidligere `beta-data.udir.no` i status-URI-ene (nå har alle
+ * endepunkter `data.udir.no`), men gamle spørringer kan fortsatt ha den varianten
+ * deklarert – den byttes da til den endepunktet vil ha.
  * Når spørringen har en av disse deklarert og det valgte endepunktet vil ha en annen,
  * bytter vi den ut (men vi rører aldri en verdi som ikke står på lista).
  */
@@ -103,7 +105,7 @@ export type PrefixResult = {
  *   KNOWN_PREFIX_VARIANTS) med den verdien det valgte endepunktet vil ha.
  * Egendefinerte prefiks-verdier røres aldri.
  *
- * @param overrides prefiks-overstyringer for det valgte endepunktet (f.eks. { st: "https://beta-data.udir.no/…" })
+ * @param overrides prefiks-overstyringer for det valgte endepunktet (Endpoint.prefixes)
  */
 export function ensurePrefixes(
   query: string,
