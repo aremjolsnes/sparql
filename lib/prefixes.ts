@@ -29,7 +29,7 @@ export const KNOWN_PREFIX_VARIANTS: Record<string, string[]> = {
  */
 function stripLiterals(query: string): string {
   return query
-    .replace(/<[^>]*>/g, " ") // IRI-er
+    .replace(/<[^<>"{}|\\^`\s]*>/g, " ") // IRI-er (IRIREF: ingen mellomrom, så «?a < 5 … ?b > 1» ikke tas for en IRI)
     .replace(/"""[\s\S]*?"""/g, " ") // trippel-hermetegn
     .replace(/'''[\s\S]*?'''/g, " ")
     .replace(/"(?:\\.|[^"\\])*"/g, " ") // vanlige strenger
