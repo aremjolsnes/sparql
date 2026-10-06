@@ -13,22 +13,20 @@ Inspirert av GraphDB Workbench (se [screenshot.png](screenshot.png)), men med m�
 
 Listen ligger server-side (env-var / konfigfil). Bare visningsnavnet vises i UI-et.
 
-| Visningsnavn      | URL                                                                                          | Merknad          |
-|-------------------|--------------------------------------------------------------------------------------------- |------------------|
-| Fuseki Dev        | `https://ca-sparql-dev.yellowbeach-43b18c61.norwayeast.azurecontainerapps.io/201906/query`  |                  |
-| Fuseki Beta       | `https://ca-sparql-beta.whitedune-e5bf55cb.norwayeast.azurecontainerapps.io/201906/query`   | Default          |
-| Beta              | `https://sparql-beta-data.udir.no/repositories/201906`                                       |                  |
-| Prod              | `https://sparql-data.udir.no/repositories/201906`                                            |                  |
+| Visningsnavn      | URL                                                    | Merknad                                   |
+|-------------------|--------------------------------------------------------|-------------------------------------------|
+| Beta              | `https://sparql-beta-data.udir.no/repositories/201906` | Default. Jena Fuseki                      |
+| Prod              | `https://sparql-data.udir.no/repositories/201906`      | GraphDB; går over til Fuseki 9. nov. 2026 |
 
-- Azure-endepunktet bruker SPARQL-protokollstien `/201906/query`; GraphDB-endepunktene bruker
-  `/repositories/201906`. Begge tar samme POST-form.
-- Alle tre er nåbare fra offentlig internett, så backend-proxy fungerer for alle.
+- De tidligere Azure-endepunktene (Fuseki Dev / Fuseki Beta, `ca-sparql-*`) er fjernet etter at
+  Beta-domenet gikk over til Fuseki.
+- Begge er nåbare fra offentlig internett, så backend-proxy fungerer for begge.
 - Endepunktet har en egen tidsgrense på 2 minutter.
 
 ### Egendefinerte endepunkter
 
 Tannhjul til høyre for endepunktsvalget åpner en modal der brukeren kan legge til / fjerne
-egne endepunkter (URL + visningsnavn). Disse lagres i `localStorage`. De tre innebygde
+egne endepunkter (URL + visningsnavn). Disse lagres i `localStorage`. De innebygde
 kan ikke fjernes.
 
 **Ute av scope nå:** Test- og QA-endepunktene (`sparql-test-data` / `sparql-qa-data`),

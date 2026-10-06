@@ -15,18 +15,9 @@ export type Endpoint = {
 
 /**
  * Innebygde endepunkter. Test/QA er utelatt med vilje – de er kun nåbare via Udir-VPN.
+ * Beta kjører Jena Fuseki; Prod kjører GraphDB fram til Fuseki-byttet 9. november 2026.
  */
 export const BUILTIN_ENDPOINTS: Endpoint[] = [
-  {
-    name: "Fuseki Dev",
-    url: "https://ca-sparql-dev.yellowbeach-43b18c61.norwayeast.azurecontainerapps.io/201906/query",
-    builtin: true,
-  },
-  {
-    name: "Fuseki Beta",
-    url: "https://ca-sparql-beta.whitedune-e5bf55cb.norwayeast.azurecontainerapps.io/201906/query",
-    builtin: true,
-  },
   {
     name: "Beta",
     url: "https://sparql-beta-data.udir.no/repositories/201906",
@@ -39,7 +30,7 @@ export const BUILTIN_ENDPOINTS: Endpoint[] = [
   },
 ];
 
-export const DEFAULT_ENDPOINT_NAME = "Fuseki Beta";
+export const DEFAULT_ENDPOINT_NAME = "Beta";
 
 /** Antall rader per side i visningen. */
 export const PAGE_SIZE = 1000;

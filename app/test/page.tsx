@@ -21,12 +21,8 @@ select * where {
 
 const TEST_URL_PRESETS = [
   {
-    label: "Dev",
-    url: "https://ca-sparql-dev.yellowbeach-43b18c61.norwayeast.azurecontainerapps.io/201906/query",
-  },
-  {
     label: "Beta",
-    url: "https://ca-sparql-beta.whitedune-e5bf55cb.norwayeast.azurecontainerapps.io/201906/query",
+    url: "https://sparql-beta-data.udir.no/repositories/201906",
   },
 ];
 

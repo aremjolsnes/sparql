@@ -4,7 +4,7 @@ import { ensurePrefixes } from "@/lib/prefixes";
 export const DEFAULT_PROD =
   "https://sparql-data.udir.no/repositories/201906";
 export const DEFAULT_TEST =
-  "https://ca-sparql-dev.yellowbeach-43b18c61.norwayeast.azurecontainerapps.io/201906/query";
+  "https://sparql-beta-data.udir.no/repositories/201906";
 
 export interface EndpointConfig {
   prod: string;
