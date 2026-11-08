@@ -103,6 +103,8 @@ Brukerens egne, ekstra prefikser skal beholdes. Tokens inne i strenger/IRI-er sk
 PREFIX udir: <http://psi.udir.no/ontologi/>
 PREFIX owl:  <http://www.w3.org/2002/07/owl#>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX schema: <https://schema.org/>
 ```
 
 De settes bare inn når Sandkassen er valgt, men brukes alltid til å forkorte URI-er i resultatene.
