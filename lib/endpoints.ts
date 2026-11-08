@@ -49,7 +49,7 @@ export const BUILTIN_ENDPOINTS: Endpoint[] = [
     url: "https://grep-fuseki-v3.fly.dev/ds/query",
     builtin: true,
     docs: {
-      title: "Sandkassen: brukerveiledning",
+      title: "Sandkassen: Brukerveiledning",
       markdownUrl:
         "https://raw.githubusercontent.com/aremjolsnes/grep-jena-fuseki/main/docs/bruk.md",
       sourceUrl: "https://github.com/aremjolsnes/grep-jena-fuseki/blob/main/docs/bruk.md",

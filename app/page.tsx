@@ -498,9 +498,11 @@ export default function Page() {
             <a
               href={`/dokumentasjon?endepunkt=${encodeURIComponent(selectedEndpoint.name)}`}
               title={`Dokumentasjon: ${selectedEndpoint.docs.title}`}
-              className="w-6 h-6 flex items-center justify-center rounded-full border border-border text-muted hover:bg-panel-2 hover:text-foreground"
+              className="h-6 w-6 sm:w-auto flex items-center justify-center gap-1.5 sm:pl-1.5 sm:pr-2.5 rounded-full border border-border text-xs text-muted hover:bg-panel-2 hover:text-foreground"
             >
-              <SandboxIcon className="w-4 h-4" />
+              <SandboxIcon className="w-4 h-4 shrink-0" />
+              {/* Pille med tekst på større skjermer, bare sirkel med ikon på mobil */}
+              <span className="hidden sm:inline">{selectedEndpoint.docs.title}</span>
             </a>
           )}
           <a
@@ -509,13 +511,6 @@ export default function Page() {
             className="w-6 h-6 flex items-center justify-center rounded-full border border-border text-xs text-muted hover:bg-panel-2 hover:text-foreground"
           >
             ?
-          </a>
-          <a
-            href="/test"
-            title="Fuseki-test: sammenlign GraphDB mot Jena Fuseki"
-            className="w-6 h-6 flex items-center justify-center rounded-full border border-border text-xs text-muted hover:bg-panel-2 hover:text-foreground"
-          >
-            ⇄
           </a>
           <AuthBar />
         </div>

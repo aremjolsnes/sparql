@@ -676,6 +676,10 @@ miljøet uten Ares egne brukeropplysninger.
 
 ## 11. 🔵 Rekkefølge-uavhengig sammenligning av kommaseparerte felt i /test
 
+> **Utgått 2026-11-08:** Fuseki-testen (`/test`, `app/api/test/`, `lib/fuseki-test/`) er fjernet, fordi Prod
+> går over til Fuseki 9. november 2026 og det ikke lenger er noe å sammenligne. Supabase-tabellene fra
+> `004_fuseki_test_store.sql` står, med de gamle rapportene. Koden finnes i git-historikken.
+
 Idé fra Are (2026-09-17), oppdaget via `/test` sin «Feltavvik»-tabell: et felt
 bygget med `GROUP_CONCAT(DISTINCT …; separator=", ")` (typisk `progOmr`,
 `laereplan`, `forAarstrinn`, `benyttesSammenMed` i `Fagkoder-vår-2026.rq`) kan
