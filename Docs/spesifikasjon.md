@@ -23,6 +23,11 @@ Listen ligger server-side (env-var / konfigfil). Bare visningsnavnet vises i UI-
   Beta-domenet gikk over til Fuseki.
 - Alle tre er nåbare fra offentlig internett, så backend-proxyen fungerer for alle.
 - Endepunktet har en egen tidsgrense på 2 minutter.
+- **Dokumentasjon per endepunkt:** et innebygd endepunkt kan ha `docs` (tittel, rå Markdown-URL, kilde-URL) i
+  `lib/endpoints.ts`. Når det er valgt, viser topplinjen et ikon (sandkasse med spade, `components/SandboxIcon.tsx`)
+  til venstre for `?`. Ikonet åpner `/dokumentasjon?endepunkt=<navn>`, som henter Markdown-filen (hurtigbufret i
+  10 minutter) og viser den med `react-markdown` og `remark-gfm`. Relative lenker i filen pekes til GitHub. I dag
+  har bare Sandkassen dokumentasjon: `docs/bruk.md` i grep-jena-fuseki.
 
 ### Egendefinerte endepunkter
 

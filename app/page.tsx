@@ -6,6 +6,7 @@ import ResultsTable from "@/components/ResultsTable";
 import Pagination from "@/components/Pagination";
 import Tabs from "@/components/Tabs";
 import EndpointBar from "@/components/EndpointBar";
+import SandboxIcon from "@/components/SandboxIcon";
 import { BUILTIN_ENDPOINTS, DEFAULT_ENDPOINT_NAME, PAGE_SIZE, Endpoint } from "@/lib/endpoints";
 import { ensurePrefixes, shortenUri } from "@/lib/prefixes";
 import {
@@ -493,6 +494,15 @@ export default function Page() {
       {/* Topplinje */}
       <header className="border-b border-border">
         <div className="flex items-center justify-end gap-3 px-5 pt-2 pb-1 text-sm">
+          {selectedEndpoint.docs && (
+            <a
+              href={`/dokumentasjon?endepunkt=${encodeURIComponent(selectedEndpoint.name)}`}
+              title={`Dokumentasjon: ${selectedEndpoint.docs.title}`}
+              className="w-6 h-6 flex items-center justify-center rounded-full border border-border text-muted hover:bg-panel-2 hover:text-foreground"
+            >
+              <SandboxIcon className="w-4 h-4" />
+            </a>
+          )}
           <a
             href="/hjelp"
             title="Hjelp: verktøystøtte i editoren"

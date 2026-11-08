@@ -11,6 +11,18 @@ export type Endpoint = {
    * Prod-data (`data.udir.no` i status-URI-ene) siden Fuseki-byttet.
    */
   prefixes?: Record<string, string>;
+  /**
+   * Brukerdokumentasjon for endepunktet. Når den finnes, vises et ikon i topplinjen som åpner
+   * /dokumentasjon?endepunkt=<name>, der Markdown-filen hentes og vises.
+   */
+  docs?: {
+    /** Overskrift på dokumentasjonssiden */
+    title: string;
+    /** Rå Markdown-fil som hentes og vises */
+    markdownUrl: string;
+    /** Siden der filen ligger (GitHub), for lenken «Kilde» og for relative lenker i filen */
+    sourceUrl: string;
+  };
 };
 
 /**
@@ -36,6 +48,12 @@ export const BUILTIN_ENDPOINTS: Endpoint[] = [
     name: "Sandkassen",
     url: "https://grep-fuseki-v3.fly.dev/ds/query",
     builtin: true,
+    docs: {
+      title: "Sandkassen: brukerveiledning",
+      markdownUrl:
+        "https://raw.githubusercontent.com/aremjolsnes/grep-jena-fuseki/main/docs/bruk.md",
+      sourceUrl: "https://github.com/aremjolsnes/grep-jena-fuseki/blob/main/docs/bruk.md",
+    },
   },
 ];
 
