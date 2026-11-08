@@ -96,6 +96,17 @@ Ved klikk på «Kjør»:
 
 Brukerens egne, ekstra prefikser skal beholdes. Tokens inne i strenger/IRI-er skal ignoreres.
 
+**Prefikser per endepunkt:** `Endpoint.prefixes` slås sammen med de faste. Sandkassen har i tillegg
+(`SANDBOX_PREFIXES` i `lib/prefixes.ts`):
+
+```sparql
+PREFIX udir: <http://psi.udir.no/ontologi/>
+PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+```
+
+De settes bare inn når Sandkassen er valgt, men brukes alltid til å forkorte URI-er i resultatene.
+
 ## Layout
 
 Mørkt tema. Ikke pixel-tro kopi av GraphDB – funksjonaliteten er det viktige.

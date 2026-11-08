@@ -1,3 +1,5 @@
+import { SANDBOX_PREFIXES } from "@/lib/prefixes";
+
 export type Endpoint = {
   /** Visningsnavn i nedtrekksmenyen */
   name: string;
@@ -6,9 +8,9 @@ export type Endpoint = {
   /** Innebygde endepunkter kan ikke fjernes i UI-et */
   builtin?: boolean;
   /**
-   * Prefiks-overstyringer for dette endepunktet, for endepunkter som avviker fra
-   * FIXED_PREFIXES. Ingen av de innebygde trenger det lenger: Beta har hatt
-   * Prod-data (`data.udir.no` i status-URI-ene) siden Fuseki-byttet.
+   * Ekstra prefikser for dette endepunktet, eller overstyringer av FIXED_PREFIXES. Slås sammen
+   * med de faste i ensurePrefixes, så brukeren kan skrive `udir:` osv. uten PREFIX-linje.
+   * Sandkassen bruker det til sine egne navnerom (udir:, owl:, skos:).
    */
   prefixes?: Record<string, string>;
   /**
@@ -48,6 +50,7 @@ export const BUILTIN_ENDPOINTS: Endpoint[] = [
     name: "Sandkassen",
     url: "https://grep-fuseki-v3.fly.dev/ds/query",
     builtin: true,
+    prefixes: SANDBOX_PREFIXES,
     docs: {
       title: "Sandkassen: Brukerveiledning",
       markdownUrl:

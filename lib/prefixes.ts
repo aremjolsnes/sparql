@@ -9,6 +9,17 @@ export const FIXED_PREFIXES: Record<string, string> = {
 };
 
 /**
+ * Prefikser som bare Sandkassen bruker (grep-jena-fuseki: ontologi, normalisering og utledning).
+ * Settes inn automatisk når Sandkassen er valgt (Endpoint.prefixes), og brukes alltid til å
+ * forkorte URI-er i resultatene.
+ */
+export const SANDBOX_PREFIXES: Record<string, string> = {
+  udir: "http://psi.udir.no/ontologi/",
+  owl: "http://www.w3.org/2002/07/owl#",
+  skos: "http://www.w3.org/2004/02/skos/core#",
+};
+
+/**
  * Kjente varianter av en prefiks-verdi som betyr «samme ting» på ulike endepunkter.
  * Beta-repoet brukte tidligere `beta-data.udir.no` i status-URI-ene (nå har alle
  * endepunkter `data.udir.no`), men gamle spørringer kan fortsatt ha den varianten
@@ -66,6 +77,7 @@ function usedPrefixes(strippedQuery: string): Set<string> {
  */
 const SHORTEN_TABLE: [prefix: string, value: string][] = [
   ...Object.entries(FIXED_PREFIXES),
+  ...Object.entries(SANDBOX_PREFIXES), // udir: er en del av u:, men den lengste verdien sjekkes først
   ...Object.entries(KNOWN_PREFIX_VARIANTS).flatMap(([p, variants]) =>
     variants.map((v): [string, string] => [p, v]),
   ),
