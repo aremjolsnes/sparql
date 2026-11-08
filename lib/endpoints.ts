@@ -54,7 +54,7 @@ export const BUILTIN_ENDPOINTS: Endpoint[] = [
     docs: {
       title: "Sandkassen: Brukerveiledning",
       markdownUrl:
-        "https://raw.githubusercontent.com/aremjolsnes/grep-jena-fuseki/main/docs/bruk.md",
+        "https://raw.githubusercontent.com/aremjolsnes/grep-jena-fuseki/refs/heads/main/docs/bruk.md",
       sourceUrl: "https://github.com/aremjolsnes/grep-jena-fuseki/blob/main/docs/bruk.md",
     },
   },

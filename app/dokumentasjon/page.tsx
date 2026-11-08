@@ -6,7 +6,8 @@ import { BUILTIN_ENDPOINTS } from "@/lib/endpoints";
 /**
  * Viser brukerdokumentasjonen for et endepunkt (Endpoint.docs), hentet som Markdown.
  * Åpnes fra ikonet i topplinjen når et endepunkt med dokumentasjon er valgt.
- * Filen hentes på nytt etter høyst ti minutter, så endringer i repoet slår raskt gjennom.
+ * Filen hentes fra main på GitHub. Appen tar vare på den i høyst ett minutt, og GitHub (raw.githubusercontent.com)
+ * i høyst fem (max-age=300), så endringer i repoet vises innen omtrent fem minutter.
  */
 export default async function DokumentasjonPage(props: PageProps<"/dokumentasjon">) {
   const { endepunkt } = await props.searchParams;
@@ -26,7 +27,7 @@ export default async function DokumentasjonPage(props: PageProps<"/dokumentasjon
   const docs = ep.docs;
   let markdown: string | null = null;
   try {
-    const res = await fetch(docs.markdownUrl, { next: { revalidate: 600 } });
+    const res = await fetch(docs.markdownUrl, { next: { revalidate: 60 } });
     if (res.ok) markdown = await res.text();
   } catch {
     markdown = null;
