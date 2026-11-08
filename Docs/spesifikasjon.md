@@ -17,10 +17,11 @@ Listen ligger server-side (env-var / konfigfil). Bare visningsnavnet vises i UI-
 |-------------------|--------------------------------------------------------|-------------------------------------------|
 | Beta              | `https://sparql-beta-data.udir.no/repositories/201906` | Default. Jena Fuseki                      |
 | Prod              | `https://sparql-data.udir.no/repositories/201906`      | GraphDB; går over til Fuseki 9. nov. 2026 |
+| Sandkassen        | `https://grep-fuseki-v3.fly.dev/ds/query`              | Fuseki på Fly.io (grep-jena-fuseki). Prod-data + ontologi og normalisering. Kald start 10–20 s |
 
 - De tidligere Azure-endepunktene (Fuseki Dev / Fuseki Beta, `ca-sparql-*`) er fjernet etter at
   Beta-domenet gikk over til Fuseki.
-- Begge er nåbare fra offentlig internett, så backend-proxy fungerer for begge.
+- Alle tre er nåbare fra offentlig internett, så backend-proxyen fungerer for alle.
 - Endepunktet har en egen tidsgrense på 2 minutter.
 
 ### Egendefinerte endepunkter

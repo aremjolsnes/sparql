@@ -16,6 +16,7 @@ export type Endpoint = {
 /**
  * Innebygde endepunkter. Test/QA er utelatt med vilje – de er kun nåbare via Udir-VPN.
  * Beta kjører Jena Fuseki; Prod kjører GraphDB fram til Fuseki-byttet 9. november 2026.
+ * Sandkassen er Fuseki på Fly.io med samme data pluss ontologi og normalisering.
  */
 export const BUILTIN_ENDPOINTS: Endpoint[] = [
   {
@@ -26,6 +27,14 @@ export const BUILTIN_ENDPOINTS: Endpoint[] = [
   {
     name: "Prod",
     url: "https://sparql-data.udir.no/repositories/201906",
+    builtin: true,
+  },
+  {
+    // Grep-sandkassen (repo aremjolsnes/grep-jena-fuseki): Prod-dumpen lastet inn nattlig, med
+    // ontologi og normaliserte grafer. Fly-maskinen stopper ved inaktivitet, så første spørring
+    // etter en pause kan bruke 10–20 sekunder ekstra på oppstart.
+    name: "Sandkassen",
+    url: "https://grep-fuseki-v3.fly.dev/ds/query",
     builtin: true,
   },
 ];
