@@ -19,6 +19,7 @@ export const SANDBOX_PREFIXES: Record<string, string> = {
   skos: "http://www.w3.org/2004/02/skos/core#",
   dcterms: "http://purl.org/dc/terms/",
   schema: "https://schema.org/",
+  text: "http://jena.apache.org/text#",
 };
 
 /**
