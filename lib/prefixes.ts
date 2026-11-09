@@ -20,6 +20,8 @@ export const SANDBOX_PREFIXES: Record<string, string> = {
   dcterms: "http://purl.org/dc/terms/",
   schema: "https://schema.org/",
   text: "http://jena.apache.org/text#",
+  styrk: "http://psi.udir.no/ontologi/styrk08/",
+  isco: "http://data.europa.eu/esco/isco/",
 };
 
 /**

@@ -106,6 +106,8 @@ PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX schema: <https://schema.org/>
 PREFIX text: <http://jena.apache.org/text#>
+PREFIX styrk: <http://psi.udir.no/ontologi/styrk08/>
+PREFIX isco: <http://data.europa.eu/esco/isco/>
 ```
 
 De settes bare inn når Sandkassen er valgt, men brukes alltid til å forkorte URI-er i resultatene.
