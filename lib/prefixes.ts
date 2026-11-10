@@ -24,6 +24,9 @@ export const SANDBOX_PREFIXES: Record<string, string> = {
   isco: "http://data.europa.eu/esco/isco/",
   dcat: "http://www.w3.org/ns/dcat#",
   void: "http://rdfs.org/ns/void#",
+  nus: "http://psi.udir.no/ontologi/nus/",
+  iscedf: "http://data.europa.eu/esco/isced-f/",
+  isced2011: "http://psi.udir.no/ontologi/isced2011/",
 };
 
 /**

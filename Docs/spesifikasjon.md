@@ -110,6 +110,9 @@ PREFIX styrk: <http://psi.udir.no/ontologi/styrk08/>
 PREFIX isco: <http://data.europa.eu/esco/isco/>
 PREFIX dcat: <http://www.w3.org/ns/dcat#>
 PREFIX void: <http://rdfs.org/ns/void#>
+PREFIX nus: <http://psi.udir.no/ontologi/nus/>
+PREFIX iscedf: <http://data.europa.eu/esco/isced-f/>
+PREFIX isced2011: <http://psi.udir.no/ontologi/isced2011/>
 ```
 
 De settes bare inn når Sandkassen er valgt, men brukes alltid til å forkorte URI-er i resultatene.
