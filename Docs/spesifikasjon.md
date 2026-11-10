@@ -113,6 +113,7 @@ PREFIX void: <http://rdfs.org/ns/void#>
 PREFIX nus: <http://psi.udir.no/ontologi/nus/>
 PREFIX iscedf: <http://data.europa.eu/esco/isced-f/>
 PREFIX isced2011: <http://psi.udir.no/ontologi/isced2011/>
+PREFIX esco: <http://data.europa.eu/esco/model#>
 ```
 
 De settes bare inn når Sandkassen er valgt, men brukes alltid til å forkorte URI-er i resultatene.
