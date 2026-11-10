@@ -22,6 +22,8 @@ export const SANDBOX_PREFIXES: Record<string, string> = {
   text: "http://jena.apache.org/text#",
   styrk: "http://psi.udir.no/ontologi/styrk08/",
   isco: "http://data.europa.eu/esco/isco/",
+  dcat: "http://www.w3.org/ns/dcat#",
+  void: "http://rdfs.org/ns/void#",
 };
 
 /**
