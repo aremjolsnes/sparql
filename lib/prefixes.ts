@@ -28,6 +28,8 @@ export const SANDBOX_PREFIXES: Record<string, string> = {
   iscedf: "http://data.europa.eu/esco/isced-f/",
   isced2011: "http://psi.udir.no/ontologi/isced2011/",
   esco: "http://data.europa.eu/esco/model#",
+  sssom: "https://w3id.org/sssom/",
+  semapv: "https://w3id.org/semapv/vocab/",
 };
 
 /**

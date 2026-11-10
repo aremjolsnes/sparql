@@ -10,7 +10,7 @@ export type Endpoint = {
   /**
    * Ekstra prefikser for dette endepunktet, eller overstyringer av FIXED_PREFIXES. Slås sammen
    * med de faste i ensurePrefixes, så brukeren kan skrive `udir:` osv. uten PREFIX-linje.
-   * Sandkassen bruker det til sine egne navnerom (udir:, owl:, skos:, dcterms:, schema:, text:, styrk:, isco:, dcat:, void:, nus:, iscedf:, isced2011:, esco:).
+   * Sandkassen bruker det til sine egne navnerom (udir:, owl:, skos:, dcterms:, schema:, text:, styrk:, isco:, dcat:, void:, nus:, iscedf:, isced2011:, esco:, sssom:, semapv:).
    */
   prefixes?: Record<string, string>;
   /**
