@@ -73,8 +73,10 @@ function declaredPrefixes(query: string): Set<string> {
 /** Finner prefiks-tokens (`u:` osv.) som er i bruk i spørringen. */
 function usedPrefixes(strippedQuery: string): Set<string> {
   const set = new Set<string>();
-  // prefiks:lokal-navn – prefikset kan være tomt (":foo"), men det bryr vi oss ikke om her
-  const re = /(?:^|[^\w.-])([A-Za-z][\w.-]*):(?:[\w./%-]|$)/g;
+  // prefiks:lokal-navn – prefikset kan være tomt (":foo"), men det bryr vi oss ikke om her.
+  // Lokalnavnet kan også være tomt, som i STR(iscedf:), så vi krever ikke noe etter kolon.
+  // Bare kjente prefikser legges til, og strenger/IRI-er/kommentarer er alt fjernet.
+  const re = /(?:^|[^\w.-])([A-Za-z][\w.-]*):/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(strippedQuery)) !== null) set.add(m[1]);
   return set;
