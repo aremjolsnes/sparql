@@ -356,6 +356,29 @@ export default function Page() {
       let rowCap = Number(res.headers.get("x-row-cap")) || 0;
 
       const bodyText = await res.text();
+
+      // CONSTRUCT/DESCRIBE: grafen kommer som Turtle (eller et annet RDF-format), ikke JSON.
+      // Vis den rått i grafvisningen.
+      const contentType = (res.headers.get("content-type") ?? "").toLowerCase();
+      if (/turtle|n-triples|n-quads|trig|rdf\+xml/.test(contentType)) {
+        setRuns((r) => ({
+          ...r,
+          [tab.id]: {
+            status: "done",
+            kind: "graph",
+            vars: [],
+            bindings: [],
+            rawText: bodyText,
+            ms: hMs,
+            ranAt: Date.now(),
+            capApplied,
+            rowCap,
+            page: 0,
+          },
+        }));
+        return;
+      }
+
       let parsed: unknown;
       try {
         parsed = JSON.parse(bodyText);

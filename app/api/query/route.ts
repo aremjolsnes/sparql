@@ -86,7 +86,8 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/sparql-results+json",
+        // SELECT/ASK gir JSON-resultat; CONSTRUCT/DESCRIBE gir en graf, som vi ber om som Turtle.
+        Accept: "application/sparql-results+json, text/turtle;q=0.9",
       },
       body: new URLSearchParams({ query: effectiveQuery }).toString(),
       signal: controller.signal,
