@@ -23,11 +23,20 @@ Listen ligger server-side (env-var / konfigfil). Bare visningsnavnet vises i UI-
   Beta-domenet gikk over til Fuseki.
 - Alle tre er nåbare fra offentlig internett, så backend-proxyen fungerer for alle.
 - Endepunktet har en egen tidsgrense på 2 minutter.
-- **Dokumentasjon per endepunkt:** et innebygd endepunkt kan ha `docs` (tittel, rå Markdown-URL, kilde-URL) i
+- **Dokumentasjon per endepunkt:** et innebygd endepunkt kan ha `docs` (tittel og en liste med sider) i
   `lib/endpoints.ts`. Når det er valgt, viser topplinjen et ikon (sandkasse med spade, `components/SandboxIcon.tsx`)
-  til venstre for `?`. Ikonet åpner `/dokumentasjon?endepunkt=<navn>`, som henter Markdown-filen (hurtigbufret i
-  1 minutt i appen og 5 minutter hos GitHub) og viser den med `react-markdown` og `remark-gfm`. Relative lenker i filen pekes til GitHub. I dag
-  har bare Sandkassen dokumentasjon: `docs/bruk.md` i grep-jena-fuseki.
+  til venstre for `?`. Ikonet åpner `/dokumentasjon?endepunkt=<navn>`, en liten wiki med sidemeny. Hver side
+  (`&side=<id>`) er en Markdown-fil som ligger i sitt eget repo på GitHub. Den hentes derfra (hurtigbufret i
+  1 minutt i appen og 5 minutter hos GitHub) og vises med `react-markdown` og `remark-gfm`.
+  - Lenker mellom sidene skrives som vanlige GitHub-lenker i filene (relative i samme repo, fulle mellom repoer).
+    De blir lenker innenfor wikien når målet er en av sidene. Lenker til repoets forside går til README-siden.
+    Andre relative lenker pekes til GitHub.
+  - Overskrifter får samme anker som på GitHub, så `#`-lenker virker begge steder.
+  - ```` ```mermaid ````-blokker tegnes som diagram (`components/Mermaid.tsx`, lastes bare ved behov). GitHub tegner
+    de samme blokkene selv.
+  - I dag har bare Sandkassen dokumentasjon: brukerveiledningen (`docs/bruk.md`) og driftsdokumentasjonen
+    (`README.md`) i grep-jena-fuseki, og README og `docs/` i laereplan-prompt, som er en anvendelse av Sandkassen.
+  - `/hjelp` (skrivehjelpen i editoren) lenker til wikien, og sidemenyen lenker tilbake.
 
 ### Egendefinerte endepunkter
 

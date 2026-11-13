@@ -47,6 +47,17 @@ export default function HjelpPage() {
         </Link>
       </div>
 
+      <blockquote
+        className="border-l-4 pl-3 py-1 text-sm text-muted"
+        style={{ borderColor: "var(--accent)" }}
+      >
+        Se også{" "}
+        <Link href="/dokumentasjon?endepunkt=Sandkassen" className="text-link hover:underline">
+          Sandkassen
+        </Link>
+        : dokumentasjonen for Grep-sandkassen og det som er bygget på den.
+      </blockquote>
+
       <p className="text-sm text-muted">
         Editoren har fem former for skrivehjelp, alle fremkalt med <b>Ctrl+Space</b> (eller
         automatisk dropdown mens du skriver, for de to første). Bakgrunn og utviklingshistorikk
