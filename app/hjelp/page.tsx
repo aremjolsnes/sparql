@@ -38,7 +38,7 @@ export default function HjelpPage() {
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Hjelp: verktøystøtte i editoren</h1>
+        <h1 className="text-lg font-semibold">Hjelp: verktøystøtte i editoren (Workbench)</h1>
         <Link href="/" className="text-link hover:underline text-sm">
           Til workbench
         </Link>
