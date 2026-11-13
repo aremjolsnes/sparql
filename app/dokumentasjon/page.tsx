@@ -2,6 +2,7 @@ import { isValidElement } from "react";
 import Link from "next/link";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import KodeBlokk from "@/components/KodeBlokk";
 import Mermaid from "@/components/Mermaid";
 import { BUILTIN_ENDPOINTS, type DocPage } from "@/lib/endpoints";
 
@@ -127,11 +128,7 @@ export default async function DokumentasjonPage(props: PageProps<"/dokumentasjon
       ) {
         return <Mermaid kode={tekst(children.props.children).trim()} />;
       }
-      return (
-        <pre className="text-xs font-mono rounded border border-border bg-panel-2 p-3 overflow-auto">
-          {children}
-        </pre>
-      );
+      return <KodeBlokk>{children}</KodeBlokk>;
     },
     code: ({ className, children }) =>
       className ? (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import KodeBlokk from "@/components/KodeBlokk";
 
 function Example({
   before,
@@ -11,12 +12,8 @@ function Example({
 }) {
   return (
     <div className="space-y-1.5">
-      <pre className="text-xs font-mono whitespace-pre-wrap rounded border border-border bg-panel-2 p-3 overflow-auto">
-        {before}
-      </pre>
-      <pre className="text-xs font-mono whitespace-pre-wrap rounded border border-border bg-panel-2 p-3 overflow-auto">
-        {after}
-      </pre>
+      <KodeBlokk className="whitespace-pre-wrap">{before}</KodeBlokk>
+      <KodeBlokk className="whitespace-pre-wrap">{after}</KodeBlokk>
       {note && <p className="text-xs text-muted">{note}</p>}
     </div>
   );
