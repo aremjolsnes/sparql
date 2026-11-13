@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 
 export default function LoginPage() {
@@ -81,9 +82,9 @@ export default function LoginPage() {
             >
               {busy ? "Logger inn …" : "Logg inn"}
             </button>
-            <a href="/" className="block text-center text-sm text-link hover:underline">
+            <Link href="/" className="block text-center text-sm text-link hover:underline">
               Tilbake til workbench
-            </a>
+            </Link>
           </form>
         )}
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 
 type AdminUser = {
@@ -52,9 +53,22 @@ export default function AdminPage() {
     }
   }, [api]);
 
+  // Første henting. Tilstanden settes først når svaret kommer, ikke i selve effekten.
   useEffect(() => {
-    if (!loading && isAdmin && accessToken) refresh();
-  }, [loading, isAdmin, accessToken, refresh]);
+    if (loading || !isAdmin || !accessToken) return;
+    let avbrutt = false;
+    api("GET").then(
+      (json) => {
+        if (!avbrutt) setUsers(json.users ?? []);
+      },
+      (e) => {
+        if (!avbrutt) setErr((e as Error).message);
+      },
+    );
+    return () => {
+      avbrutt = true;
+    };
+  }, [loading, isAdmin, accessToken, api]);
 
   async function createUser(e: React.FormEvent) {
     e.preventDefault();
@@ -115,9 +129,9 @@ export default function AdminPage() {
     return (
       <div className="p-6 space-y-2">
         <p className="text-sm">Du har ikke tilgang til denne siden.</p>
-        <a href="/" className="text-link hover:underline text-sm">
+        <Link href="/" className="text-link hover:underline text-sm">
           Tilbake til workbench
-        </a>
+        </Link>
       </div>
     );
   }
@@ -126,9 +140,9 @@ export default function AdminPage() {
     <div className="max-w-3xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">Brukere</h1>
-        <a href="/" className="text-link hover:underline text-sm">
+        <Link href="/" className="text-link hover:underline text-sm">
           Til workbench
-        </a>
+        </Link>
       </div>
 
       {err && (

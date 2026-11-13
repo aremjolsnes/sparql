@@ -26,8 +26,10 @@ export default function SparqlEditor({ value, onChange, onRun }: Props) {
   // Hold ferske callbacks uten å bygge editoren på nytt.
   const onChangeRef = useRef(onChange);
   const onRunRef = useRef(onRun);
-  onChangeRef.current = onChange;
-  onRunRef.current = onRun;
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    onRunRef.current = onRun;
+  });
   const termsRef = useRef<OntologyTerm[]>([]);
 
   useEffect(() => {

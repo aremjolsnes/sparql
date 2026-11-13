@@ -44,9 +44,11 @@ export default function SavedQueriesMenu({
     }
   }, []);
 
-  useEffect(() => {
-    if (open) refresh();
-  }, [open, refresh]);
+  /** Åpner menyen og henter listen på nytt */
+  function openMenu() {
+    setOpen(true);
+    refresh();
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -69,8 +71,7 @@ export default function SavedQueriesMenu({
         query: currentQuery,
         endpoint_name: currentEndpointName || null,
       });
-      if (open) refresh();
-      else setOpen(true);
+      openMenu();
     } catch (e) {
       setErr((e as Error).message);
     }
@@ -120,7 +121,7 @@ export default function SavedQueriesMenu({
           Lagre spørring
         </button>
         <button
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => (open ? setOpen(false) : openMenu())}
           className="border border-border rounded px-2 py-1 text-sm hover:bg-panel-2"
           aria-label="Lagrede spørringer"
         >

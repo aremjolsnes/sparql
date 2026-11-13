@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 
 export default function ProfilPage() {
@@ -43,9 +44,9 @@ export default function ProfilPage() {
     <div className="max-w-md mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">Profil</h1>
-        <a href="/" className="text-link hover:underline text-sm">
+        <Link href="/" className="text-link hover:underline text-sm">
           Til workbench
-        </a>
+        </Link>
       </div>
 
       <dl className="text-sm border border-border rounded bg-panel divide-y divide-border">
