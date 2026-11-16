@@ -36,6 +36,8 @@ Listen ligger server-side (env-var / konfigfil). Bare visningsnavnet vises i UI-
     de samme blokkene selv.
   - I dag har bare Sandkassen dokumentasjon: brukerveiledningen (`docs/bruk.md`) og driftsdokumentasjonen
     (`README.md`) i grep-jena-fuseki, og README og `docs/` i laereplan-prompt, som er en anvendelse av Sandkassen.
+    To grupper går i dybden, begge fra grep-jena-fuseki: «Ontologien» (`docs/ontologi/`, fem sider) og
+    «Koblede kunnskapsgrafer» (`docs/koblinger/`, fem sider om STYRK-08, ESCO, NUS og ISCED).
   - `/hjelp` (skrivehjelpen i editoren) lenker til wikien, og sidemenyen lenker tilbake.
 
 ### Egendefinerte endepunkter

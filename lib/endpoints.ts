@@ -33,6 +33,8 @@ function githubSide(
 }
 
 const SANDKASSEN = "Sandkassen";
+const ONTOLOGIEN = "Ontologien";
+const KOBLINGER = "Koblede kunnskapsgrafer";
 const LAEREPLAN_PROMPT = "Anvendelse: laereplan-prompt";
 
 export type Endpoint = {
@@ -98,6 +100,56 @@ export const BUILTIN_ENDPOINTS: Endpoint[] = [
           { id: "drift", label: "Drift og oppsett", group: SANDKASSEN },
           "grep-jena-fuseki",
           "README.md",
+        ),
+        githubSide(
+          { id: "ontologi", label: "Hva den er", group: ONTOLOGIEN },
+          "grep-jena-fuseki",
+          "docs/ontologi/oversikt.md",
+        ),
+        githubSide(
+          { id: "ontologi-klasser", label: "Klasser og egenskaper", group: ONTOLOGIEN },
+          "grep-jena-fuseki",
+          "docs/ontologi/klasser-og-egenskaper.md",
+        ),
+        githubSide(
+          { id: "ontologi-sporringer", label: "Bruk i spørringer", group: ONTOLOGIEN },
+          "grep-jena-fuseki",
+          "docs/ontologi/sporringer.md",
+        ),
+        githubSide(
+          { id: "ontologi-utledning", label: "Utledning (R1–R5)", group: ONTOLOGIEN },
+          "grep-jena-fuseki",
+          "docs/ontologi/utledning.md",
+        ),
+        githubSide(
+          { id: "ontologi-begrepssystemer", label: "Begrepssystemer (SKOS)", group: ONTOLOGIEN },
+          "grep-jena-fuseki",
+          "docs/ontologi/begrepssystemer.md",
+        ),
+        githubSide(
+          { id: "koblinger", label: "Oversikt", group: KOBLINGER },
+          "grep-jena-fuseki",
+          "docs/koblinger/oversikt.md",
+        ),
+        githubSide(
+          { id: "koblinger-styrk", label: "Yrker: STYRK-08 og ISCO-08", group: KOBLINGER },
+          "grep-jena-fuseki",
+          "docs/koblinger/styrk.md",
+        ),
+        githubSide(
+          { id: "koblinger-esco", label: "ESCO: yrker og ferdigheter", group: KOBLINGER },
+          "grep-jena-fuseki",
+          "docs/koblinger/esco.md",
+        ),
+        githubSide(
+          { id: "koblinger-km-esco", label: "Kompetansemål og ESCO", group: KOBLINGER },
+          "grep-jena-fuseki",
+          "docs/koblinger/km-esco.md",
+        ),
+        githubSide(
+          { id: "koblinger-nus", label: "Utdanninger: NUS og ISCED", group: KOBLINGER },
+          "grep-jena-fuseki",
+          "docs/koblinger/nus.md",
         ),
         githubSide(
           { id: "laereplan-prompt", label: "Oversikt", group: LAEREPLAN_PROMPT },
