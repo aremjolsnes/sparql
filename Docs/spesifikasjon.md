@@ -196,6 +196,14 @@ Miljøvariabler: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_K
 `/api/admin/users` er beskyttet med `Authorization: Bearer <access_token>` + admin-sjekk
 via secret-nøkkelen. Første admin må opprettes manuelt i Supabase (Auth → Users).
 
+**Avvik i Grep-dataene:** `/admin` viser også åpne issues i sandkasse-repoet
+(`/api/admin/avvik`, samme beskyttelse), og «Admin» i topplinja får en blå boble med antallet.
+Den nattlige innlastingen i grep-jena-fuseki melder data som bør sjekkes i Grep som issuen
+«Avvik i Grep-dataene», og brødteksten (én tabell per kontroll) gjengis med react-markdown.
+Repoet er offentlig, så GitHub-API-et brukes uten token; `GITHUB_TOKEN` og `GITHUB_REPO` er
+valgfrie. Svaret bufres fem minutter. Lagt til 2026-11-20 fordi GitHubs e-postvarsel til den
+tildelte ikke kom fram.
+
 **DB (Postgres + RLS «kun egne rader»):**
 - `profiles` (id = auth-bruker, email, role, created_at) – fylles av trigger på `auth.users`.
 - `saved_queries` (id, user_id, title, query, endpoint_name, created_at, updated_at).

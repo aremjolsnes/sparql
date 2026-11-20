@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useAuth } from "@/components/AuthProvider";
+import Boble from "@/components/Boble";
+import { useAvvik } from "@/lib/useAvvik";
 
 type AdminUser = {
   id: string;
@@ -139,11 +143,15 @@ export default function AdminPage() {
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Brukere</h1>
+        <h1 className="text-lg font-semibold">Admin</h1>
         <Link href="/" className="text-link hover:underline text-sm">
           Til workbench
         </Link>
       </div>
+
+      <AvvikPanel accessToken={accessToken} />
+
+      <h2 className="text-base font-semibold pt-2">Brukere</h2>
 
       {err && (
         <p className="text-sm rounded border px-3 py-2"
@@ -263,5 +271,101 @@ export default function AdminPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+/** Markdown fra GitHub-issuen: en overskrift og en tabell per kontroll */
+const markdownKomponenter: Components = {
+  h3: ({ children }) => <h3 className="text-sm font-semibold mt-4">{children}</h3>,
+  p: ({ children }) => <p className="text-sm leading-relaxed">{children}</p>,
+  a: ({ href, children }) => (
+    <a href={href} className="text-link hover:underline" target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  ),
+  code: ({ children }) => (
+    <code className="font-mono text-[0.85em] rounded bg-panel-2 px-1 py-0.5">{children}</code>
+  ),
+  table: ({ children }) => (
+    <div className="overflow-auto">
+      <table className="text-xs border-collapse">{children}</table>
+    </div>
+  ),
+  th: ({ children }) => (
+    <th className="border border-border bg-panel-2 px-2 py-1 text-left font-semibold">{children}</th>
+  ),
+  td: ({ children }) => <td className="border border-border px-2 py-1 align-top">{children}</td>,
+};
+
+/**
+ * Åpne issues i sandkasse-repoet, først og fremst «Avvik i Grep-dataene» fra den nattlige
+ * innlastingen. GitHub varsler den som er tildelt, men e-posten kommer ikke alltid fram, så
+ * admin-siden viser det samme. Lukkes issuen (ingen avvik lenger), forsvinner den herfra.
+ */
+function AvvikPanel({ accessToken }: { accessToken: string | null | undefined }) {
+  const { issues, url, feil } = useAvvik(accessToken);
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-base font-semibold">
+          Åpne avvik i Grep-dataene
+          {issues && issues.length > 0 && <Boble antall={issues.length} />}
+        </h2>
+        {url && (
+          <a href={url} className="text-link hover:underline text-xs" target="_blank" rel="noopener noreferrer">
+            Alle issues på GitHub
+          </a>
+        )}
+      </div>
+      <p className="text-xs text-muted">
+        Den nattlige innlastingen til sandkassen melder data som bør sjekkes i Grep som åpne issues i
+        repoet. Issuen oppdateres når avvikene endrer seg, og lukkes når alt er rettet.
+      </p>
+
+      {feil && (
+        <p
+          className="text-sm rounded border px-3 py-2"
+          style={{
+            background: "var(--danger-bg)",
+            borderColor: "var(--danger-border)",
+            color: "var(--danger-fg)",
+          }}
+        >
+          Klarte ikke å hente issues: {feil}
+        </p>
+      )}
+      {!feil && issues === null && <p className="text-sm text-muted">Henter fra GitHub …</p>}
+      {issues && issues.length === 0 && (
+        <p className="text-sm rounded border border-border bg-panel px-3 py-2">
+          Ingen åpne avvik. Siste innlasting fant ingenting som må ses på.
+        </p>
+      )}
+      {issues?.map((i) => (
+        <details key={i.number} open className="border border-border rounded bg-panel">
+          <summary className="cursor-pointer px-4 py-2 text-sm flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <a
+              href={i.url}
+              className="text-link hover:underline font-medium"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              #{i.number} {i.title}
+            </a>
+            <span className="text-xs text-muted">
+              oppdatert {new Date(i.updated_at).toLocaleString("nb-NO")}
+              {" · "}
+              {i.comments === 1 ? "1 kommentar" : `${i.comments} kommentarer`}
+              {i.assignees.length > 0 && ` · tildelt ${i.assignees.join(", ")}`}
+            </span>
+          </summary>
+          <div className="px-4 pb-4 space-y-2 border-t border-border pt-3">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownKomponenter}>
+              {i.body}
+            </ReactMarkdown>
+          </div>
+        </details>
+      ))}
+    </section>
   );
 }
